@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuickStudy - Master Your Tests</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- KaTeX for more efficient math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>QuickStudy</h1>
+            <p class="tagline">Study smarter, not harder</p>
+        </header>
+        
+        <main>
+            <div id="welcome-screen" class="screen active">
+                <h2>Welcome to QuickStudy</h2>
+                <p>Master your tests with confidence</p>
+                <div class="file-upload">
+                    <p>Upload your question set CSV or use our sample questions:</p>
+                    <input type="file" id="csv-upload" accept=".csv">
+                    <div class="sample-buttons">
+                        <button id="start-sample-math">Sample Math Questions</button>
+                        <button id="start-sample-mcq">Sample Multiple Choice</button>
+                    </div>
+                    <div class="format-info">
+                        <p>Supported CSV formats:</p>
+                        <div class="format-tabs">
+                            <button class="format-tab active" data-target="frq-format">Free Response</button>
+                            <button class="format-tab" data-target="mcq-format">Multiple Choice</button>
+                        </div>
+                        <div id="frq-format" class="format-content active">
+                            <code>question,answer,category,difficulty</code>
+                            <p>Example: "What is 3^2 + 4?",13,algebra,medium</p>
+                        </div>
+                        <div id="mcq-format" class="format-content">
+                            <code>question,correct_answer,wrong_answer_1,wrong_answer_2,wrong_answer_3,category,difficulty</code>
+                            <p>Example: "What is the capital of France?,Paris,London,Berlin,Madrid,geography,easy"</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="settings-screen" class="screen">
+                <h2>Set Target Times</h2>
+                <p>Set your target completion time for each category (in seconds):</p>
+                <div id="category-time-settings"></div>
+                <button id="start-study">Start Studying</button>
+            </div>
+            
+            <div id="study-screen" class="screen">
+                <div class="progress-container">
+                    <div class="progress-info">
+                        <span id="question-counter">Question 1/10</span>
+                        <span id="category-display">Category: Basic Addition</span>
+                        <span id="difficulty-display">Difficulty: Easy</span>
+                        <div id="mastery-indicator">
+                            <span id="mastery-level">Mastery: 0%</span>
+                            <div class="mastery-progress">
+                                <div class="mastery-progress-fill"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="progress-fill"></div>
+                    </div>
+                </div>
+                
+                <div class="question-container">
+                    <div id="timer">00:00</div>
+                    <div id="target-time"></div>
+                    
+                    <!-- Mastery Badge -->
+                    <div id="mastery-badge" class="hidden">
+                        <div class="badge-icon">✓</div>
+                        <div class="badge-text">MASTERED</div>
+                    </div>
+                    
+                    <div id="question-display"></div>
+                    
+                    <!-- Free response input -->
+                    <div id="frq-container">
+                        <div id="formatted-answer-preview"></div>
+                        <input type="text" id="answer-input" placeholder="Your answer...">
+                    </div>
+                    
+                    <!-- Multiple choice container -->
+                    <div id="mcq-container" class="hidden">
+                        <div class="mcq-options" id="mcq-options"></div>
+                    </div>
+                    
+                    <button id="submit-answer">Submit</button>
+                </div>
+                
+                <div class="stats-container">
+                    <div class="stat-box">
+                        <span class="stat-label">Correct</span>
+                        <span id="correct-count" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Incorrect</span>
+                        <span id="incorrect-count" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Avg. Time</span>
+                        <span id="avg-time" class="stat-value">0s</span>
+                    </div>
+                </div>
+                
+                <div class="mastery-overview">
+                    <h3>Category Mastery</h3>
+                    <div id="category-mastery-overview"></div>
+                </div>
+            </div>
+            
+            <div id="feedback-screen" class="screen">
+                <div id="answer-feedback"></div>
+                <div id="time-feedback"></div>
+                <div id="time-score-feedback"></div>
+                <div id="mastery-feedback" class="hidden">
+                    <div class="mastery-congrats">
+                        <div class="mastery-icon">🏆</div>
+                        <h3>Category Mastered!</h3>
+                        <p>You've shown consistent mastery of this category. Great work!</p>
+                    </div>
+                </div>
+                <button id="next-question">Next Question</button>
+            </div>
+            
+            <div id="results-screen" class="screen">
+                <h2>Your Results</h2>
+                
+                <div class="overall-summary">
+                    <h3>Overall Performance</h3>
+                    <div class="results-summary">
+                        <div class="result-metric">
+                            <span class="metric-label">Accuracy:</span>
+                            <span id="final-accuracy" class="metric-value">0%</span>
+                        </div>
+                        <div class="result-metric">
+                            <span class="metric-label">Average Time:</span>
+                            <span id="final-avg-time" class="metric-value">0s</span>
+                        </div>
+                        <div class="result-metric">
+                            <span class="metric-label">Overall Mastery:</span>
+                            <span id="final-mastery" class="metric-value">Not Yet Mastered</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="category-results">
+                    <h3>Performance by Category</h3>
+                    <div id="category-results-container"></div>
+                </div>
+                
+                <div class="mastery-feedback" id="final-mastery-feedback"></div>
+                
+                <button id="restart-btn">Study Again</button>
+            </div>
+        </main>
+        
+        <footer>
+            <p>QuickStudy - Novi High School Edition</p>
+        </footer>
+    </div>
+    
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Settings</h2>
+            
+            <div class="settings-group">
+                <h3>Appearance</h3>
+                <div class="settings-option">
+                    <label for="dark-mode-toggle">Dark Mode</label>
+                    <label class="switch">
+                        <input type="checkbox" id="dark-mode-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="settings-group">
+                <h3>Scoring</h3>
+                <div class="settings-option">
+                    <label for="time-scoring-toggle">Time-based Scoring</label>
+                    <label class="switch">
+                        <input type="checkbox" id="time-scoring-toggle" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="settings-group">
+                <h3>Input Options</h3>
+                <div class="settings-option">
+                    <label for="real-time-formatting-toggle">Real-Time Math Formatting</label>
+                    <label class="switch">
+                        <input type="checkbox" id="real-time-formatting-toggle" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="settings-group">
+                <h3>Mastery Detection</h3>
+                <div class="settings-option">
+                    <label for="adaptive-mastery-toggle">Adaptive Mastery</label>
+                    <label class="switch">
+                        <input type="checkbox" id="adaptive-mastery-toggle" checked>
+                        <span class="slider round"></span>
+                    </label>
+                    <div class="setting-description">
+                        When enabled, categories will be considered mastered after consistent correct answers.
+                    </div>
+                </div>
+                
+                <div class="settings-option">
+                    <label for="consecutive-correct-input">Required Correct Answers</label>
+                    <input type="number" id="consecutive-correct-input" min="5" max="30" value="10" class="settings-number-input">
+                    <div class="setting-description">
+                        Number of consecutive correct answers needed to achieve mastery.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="settings-btn" class="floating-btn">⚙️</div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
