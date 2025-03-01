@@ -123,7 +123,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Settings Event Listeners - Fix for settings button
+    // Settings Event Listeners
     if (elements.settingsBtn) {
         elements.settingsBtn.addEventListener('click', openSettings);
     }
@@ -158,35 +158,45 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize presets
     fetchPresetFiles();
 
-    // Function to fetch preset files
-    function fetchPresetFiles() {
-        // This would typically be a server request to get available files
-        // For this example, we'll simulate with a timeout
-
+    // Function to fetch preset files from the 'presets' folder
+    async function fetchPresetFiles() {
         // Show loading state
         if (elements.presetsContainer) {
             elements.presetsContainer.innerHTML = '<div class="preset-loading">Loading presets...</div>';
         }
 
-        setTimeout(() => {
-            // Simulated response with preset files
-            // In a real implementation, this would come from a server endpoint
-            const presetFiles = [
-                { name: 'Math Basics', filename: 'math_basics.csv', description: 'Addition, subtraction, multiplication and division' },
-                { name: 'Algebra Fundamentals', filename: 'algebra.csv', description: 'Equations, variables and expressions' },
-                { name: 'Science Quiz', filename: 'science.csv', description: 'Biology, chemistry and physics concepts' },
-                { name: 'Geography Capitals', filename: 'capitals.csv', description: 'Countries and their capital cities' },
-                { name: 'History Facts', filename: 'history.csv', description: 'Major historical events and dates' }
-            ];
-
+        try {
+            // In a real implementation, we'd use an API to get a list of files
+            // Since we can't list directory contents directly, we'll work with 
+            // the files we know about through the document upload context
+            
+            // Find all files that start with "presets/" and end with ".csv"
+            const presetFiles = [];
+            
+            // Add preset files from presets/ directory
+            // Example: { name: 'Chemistry', filename: 'presets/chemistry.csv' }
+            
+            // For now, manually add Chemistry which we know exists
+            presetFiles.push({
+                name: 'Chemistry',
+                filename: 'presets/chemistry.csv',
+                description: 'Basic chemistry questions'
+            });
+            
             // Store presets in state
             state.availablePresets = presetFiles;
-
+            
             // If we're on the presets screen, display them
             if (elements.screens.presets.classList.contains('active')) {
                 displayPresetFiles();
             }
-        }, 500);
+        } catch (error) {
+            console.error("Error fetching preset files:", error);
+            if (elements.presetsContainer) {
+                elements.presetsContainer.innerHTML = 
+                    '<div class="preset-empty">Error loading presets: ' + error.message + '</div>';
+            }
+        }
     }
 
     // Function to display preset files
@@ -197,7 +207,7 @@ document.addEventListener('DOMContentLoaded', function() {
         elements.presetsContainer.innerHTML = '';
 
         if (state.availablePresets.length === 0) {
-            elements.presetsContainer.innerHTML = '<div class="preset-empty">No preset files found.</div>';
+            elements.presetsContainer.innerHTML = '<div class="preset-empty">No preset files found in the presets folder.</div>';
             return;
         }
 
@@ -206,11 +216,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const presetElement = document.createElement('div');
             presetElement.className = 'preset-item';
             
+            // Extract just the filename without path and extension
+            const displayName = preset.name || preset.filename.split('/').pop().replace('.csv', '');
+            
             const presetName = document.createElement('h3');
-            presetName.textContent = preset.name;
+            presetName.textContent = displayName;
             
             const presetDescription = document.createElement('p');
-            presetDescription.textContent = preset.description;
+            presetDescription.textContent = preset.description || `Load questions from ${displayName}`;
             
             const selectButton = document.createElement('button');
             selectButton.textContent = 'Select';
@@ -232,63 +245,25 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Function to load a preset file
-    function loadPresetFile(filename) {
+    async function loadPresetFile(filename) {
         console.log(`Loading preset file: ${filename}`);
         
         // Show loading state
         elements.presetsContainer.innerHTML = '<div class="preset-loading">Loading questions from preset...</div>';
         
-        // This would typically be a server request to get the file content
-        // For this example, we'll simulate with a timeout and sample data based on the filename
-        
-        setTimeout(() => {
-            // Simulated CSV content based on filename
-            let csvContent = '';
+        try {
+            // Use fetch API to load the CSV file from the server instead of window.fs.readFile
+            const response = await fetch(filename);
             
-            // Generate appropriate sample content based on filename
-            if (filename.includes('math')) {
-                csvContent = "Question,Answer,Category,Time,Difficulty\n";
-                csvContent += "What is 5 + 3?,8,basic_addition,5,easy\n";
-                csvContent += "What is 7 - 4?,3,basic_subtraction,5,easy\n";
-                csvContent += "What is 9 × 6?,54,multiplication,8,medium\n";
-                csvContent += "What is 20 ÷ 4?,5,division,8,medium\n";
-                csvContent += "What is 2^3?,8,exponents,7,medium\n";
-                csvContent += "What is 1/2 + 1/4?,3/4,fractions,10,medium\n";
-            } else if (filename.includes('algebra')) {
-                csvContent = "Question,Answer,Category,Time,Difficulty\n";
-                csvContent += "Solve: 2x + 3 = 7,2,linear_equations,12,medium\n";
-                csvContent += "Solve: 3x - 5 = 10,5,linear_equations,12,medium\n";
-                csvContent += "Factor: x^2 + 5x + 6,(x+2)(x+3),factoring,15,hard\n";
-                csvContent += "Evaluate: 3x when x = 4,12,evaluation,8,easy\n";
-            } else if (filename.includes('capitals')) {
-                csvContent = "Question,Answer,Options,Category,Time,Difficulty\n";
-                csvContent += "What is the capital of France?,Paris,London;Berlin;Madrid;Paris,geography,8,easy\n";
-                csvContent += "What is the capital of Japan?,Tokyo,Beijing;Seoul;Tokyo;Shanghai,geography,8,easy\n";
-                csvContent += "What is the capital of Australia?,Canberra,Sydney;Melbourne;Canberra;Perth,geography,10,hard\n";
-                csvContent += "What is the capital of Brazil?,Brasília,Rio de Janeiro;São Paulo;Brasília;Buenos Aires,geography,10,medium\n";
-            } else if (filename.includes('science')) {
-                csvContent = "Question,Answer,Options,Category,Time,Difficulty\n";
-                csvContent += "What is the chemical symbol for gold?,Au,Ag;Au;Fe;Gd,science,6,medium\n";
-                csvContent += "Which planet is closest to the sun?,Mercury,Venus;Mercury;Earth;Mars,science,7,easy\n";
-                csvContent += "What is the largest mammal on Earth?,Blue Whale,Elephant;Blue Whale;Giraffe;Polar Bear,science,6,medium\n";
-                csvContent += "Which element has the atomic number 1?,Hydrogen,Helium;Carbon;Oxygen;Hydrogen,science,8,hard\n";
-            } else if (filename.includes('history')) {
-                csvContent = "Question,Answer,Options,Category,Time,Difficulty\n";
-                csvContent += "In which year did World War II end?,1945,1939;1943;1945;1950,history,7,medium\n";
-                csvContent += "Who was the first president of the United States?,George Washington,Thomas Jefferson;George Washington;Abraham Lincoln;John Adams,history,8,easy\n";
-                csvContent += "When was the Declaration of Independence signed?,1776,1776;1787;1789;1800,history,7,easy\n";
-                csvContent += "What year did the Berlin Wall fall?,1989,1979;1985;1989;1991,history,9,medium\n";
-            } else {
-                // Generic fallback content
-                csvContent = "Question,Answer,Category,Time,Difficulty\n";
-                csvContent += "Sample Question 1,Answer 1,general,10,medium\n";
-                csvContent += "Sample Question 2,Answer 2,general,10,medium\n";
-                csvContent += "Sample Question 3,Answer 3,general,10,medium\n";
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
             }
+            
+            const csvData = await response.text();
             
             // Parse the CSV content
             try {
-                const parseResult = parseCSV(csvContent);
+                const parseResult = parseCSV(csvData);
                 state.questions = parseResult.questions;
                 state.isMCQ = parseResult.isMCQ;
                 
@@ -303,8 +278,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.error("Error parsing preset:", error);
                 elements.presetsContainer.innerHTML = '<div class="preset-empty">Error loading preset: ' + error.message + '</div>';
             }
-            
-        }, 800);
+        } catch (error) {
+            console.error("Error loading preset file:", error);
+            elements.presetsContainer.innerHTML = '<div class="preset-empty">Error: Could not load the preset file. ' + error.message + '</div>';
+        }
     }
 
     // Settings functions
@@ -1315,7 +1292,7 @@ document.addEventListener('DOMContentLoaded', function() {
             showResults();
         }
     }
-
+    
     // Function to show final results
     function showResults() {
         console.log("Showing final results");
