@@ -16,6 +16,8 @@ document.addEventListener('DOMContentLoaded', function() {
         categories: {},
         // Adaptive mastery tracking
         categoryPerformance: {},
+        // Presets
+        availablePresets: [],
         // Thresholds for mastery
         masteryThresholds: {
             minAccuracy: 85, // 85% correct
@@ -25,7 +27,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Settings
         isDarkMode: false,
         useTimeScoring: true,
-        useRealTimeFormatting: true,
         useAdaptiveMastery: true,
         requiredCorrectAnswers: 10
     };
@@ -34,16 +35,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const elements = {
         screens: {
             welcome: document.getElementById('welcome-screen'),
+            presets: document.getElementById('presets-screen'),
             study: document.getElementById('study-screen'),
             feedback: document.getElementById('feedback-screen'),
             results: document.getElementById('results-screen')
         },
         csvUpload: document.getElementById('csv-upload'),
-        startSampleMath: document.getElementById('start-sample-math'),
-        startSampleMCQ: document.getElementById('start-sample-mcq'),
-        formatTabs: document.querySelectorAll('.format-tab'),
-        formatContents: document.querySelectorAll('.format-content'),
-        startStudy: document.getElementById('start-study'),
+        usePresetBtn: document.getElementById('use-preset-btn'),
+        presetsContainer: document.getElementById('presets-container'),
+        presetBackBtn: document.getElementById('preset-back-btn'),
         questionCounter: document.getElementById('question-counter'),
         categoryDisplay: document.getElementById('category-display'),
         difficultyDisplay: document.getElementById('difficulty-display'),
@@ -81,113 +81,9 @@ document.addEventListener('DOMContentLoaded', function() {
         closeModal: document.querySelector('.close'),
         darkModeToggle: document.getElementById('dark-mode-toggle'),
         timeScoringToggle: document.getElementById('time-scoring-toggle'),
-        realTimeFormattingToggle: document.getElementById('real-time-formatting-toggle'),
         adaptiveMasteryToggle: document.getElementById('adaptive-mastery-toggle'),
         consecutiveCorrectInput: document.getElementById('consecutive-correct-input')
     };
-
-    // Sample math questions with individual times
-    const sampleMathQuestions = [
-        { question: "What is 5 + 3?", answer: "8", category: "basic_addition", time: 5, difficulty: "easy" },
-        { question: "What is 7 - 4?", answer: "3", category: "basic_subtraction", time: 5, difficulty: "easy" },
-        { question: "What is 2 + 9?", answer: "11", category: "basic_addition", time: 5, difficulty: "easy" },
-        { question: "What is 8 - 6?", answer: "2", category: "basic_subtraction", time: 5, difficulty: "easy" },
-        { question: "What is 3 + 7?", answer: "10", category: "basic_addition", time: 5, difficulty: "easy" },
-        { question: "What is 10 - 4?", answer: "6", category: "basic_subtraction", time: 6, difficulty: "medium" },
-        { question: "What is 9 + 9?", answer: "18", category: "basic_addition", time: 6, difficulty: "medium" },
-        { question: "What is 12 - 5?", answer: "7", category: "basic_subtraction", time: 6, difficulty: "medium" },
-        { question: "What is 6 + 5?", answer: "11", category: "basic_addition", time: 8, difficulty: "hard" },
-        { question: "What is 8 - 2?", answer: "6", category: "basic_subtraction", time: 5, difficulty: "hard" },
-        { question: "What is 4^2?", answer: "16", category: "exponents", time: 7, difficulty: "medium" },
-        { question: "What is 2^3?", answer: "8", category: "exponents", time: 7, difficulty: "medium" },
-        { question: "What is 1/2 + 1/4?", answer: "3/4", category: "fractions", time: 10, difficulty: "medium" },
-        { question: "What is 3/4 - 1/4?", answer: "1/2", category: "fractions", time: 8, difficulty: "medium" },
-        { question: "What is 2/3 × 3/4?", answer: "1/2", category: "fractions", time: 12, difficulty: "hard" }
-    ];
-
-    // Sample multiple choice questions with individual times and semicolon-separated options
-    const sampleMCQuestions = [
-        {
-            question: "What is the capital of France?",
-            answer: "Paris",
-            options: "London;Berlin;Madrid;Paris",
-            category: "geography",
-            time: 8,
-            difficulty: "easy"
-        },
-        {
-            question: "Which planet is closest to the sun?",
-            answer: "Mercury",
-            options: "Venus;Mercury;Earth;Mars",
-            category: "science",
-            time: 7,
-            difficulty: "easy"
-        },
-        {
-            question: "Who wrote 'Romeo and Juliet'?",
-            answer: "William Shakespeare",
-            options: "Charles Dickens;Jane Austen;William Shakespeare;Mark Twain",
-            category: "literature",
-            time: 9,
-            difficulty: "easy"
-        },
-        {
-            question: "What is the chemical symbol for gold?",
-            answer: "Au",
-            options: "Ag;Au;Fe;Gd",
-            category: "science",
-            time: 6,
-            difficulty: "medium"
-        },
-        {
-            question: "In which year did World War II end?",
-            answer: "1945",
-            options: "1939;1943;1945;1950",
-            category: "history",
-            time: 7,
-            difficulty: "medium"
-        },
-        {
-            question: "What is the largest mammal on Earth?",
-            answer: "Blue Whale",
-            options: "Elephant;Blue Whale;Giraffe;Polar Bear",
-            category: "science",
-            time: 6,
-            difficulty: "medium"
-        },
-        {
-            question: "Which element has the atomic number 1?",
-            answer: "Hydrogen",
-            options: "Helium;Carbon;Oxygen;Hydrogen",
-            category: "science",
-            time: 8,
-            difficulty: "hard"
-        },
-        {
-            question: "What is the capital of Australia?",
-            answer: "Canberra",
-            options: "Sydney;Melbourne;Canberra;Perth",
-            category: "geography",
-            time: 10,
-            difficulty: "hard"
-        },
-        {
-            question: "Who painted the Mona Lisa?",
-            answer: "Leonardo da Vinci",
-            options: "Pablo Picasso;Vincent van Gogh;Leonardo da Vinci;Michelangelo",
-            category: "art",
-            time: 8,
-            difficulty: "medium"
-        },
-        {
-            question: "What is the square root of 144?",
-            answer: "12",
-            options: "10;12;14;16",
-            category: "math",
-            time: 7,
-            difficulty: "medium"
-        }
-    ];
 
     // Default time if not specified
     const DEFAULT_TIME = 10; // seconds
@@ -198,22 +94,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Welcome screen event listeners
     elements.csvUpload.addEventListener('change', handleCSVUpload);
-    elements.startSampleMath.addEventListener('click', startWithSampleMath);
-    elements.startSampleMCQ.addEventListener('click', startWithSampleMCQ);
+    elements.usePresetBtn.addEventListener('click', showPresetsScreen);
+    elements.presetBackBtn.addEventListener('click', () => showScreen('welcome'));
     
     // Format tabs
-    elements.formatTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            elements.formatTabs.forEach(t => t.classList.remove('active'));
-            elements.formatContents.forEach(c => c.classList.remove('active'));
-            
-            tab.classList.add('active');
-            document.getElementById(tab.dataset.target).classList.add('active');
+    const formatTabs = document.querySelectorAll('.format-tab');
+    if (formatTabs) {
+        formatTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                formatTabs.forEach(t => t.classList.remove('active'));
+                document.querySelectorAll('.format-content').forEach(c => c.classList.remove('active'));
+                
+                tab.classList.add('active');
+                document.getElementById(tab.dataset.target).classList.add('active');
+            });
         });
-    });
+    }
 
     // Study screen event listeners
-    elements.startStudy.addEventListener('click', startStudySession);
     elements.submitAnswer.addEventListener('click', submitAnswer);
     elements.nextQuestion.addEventListener('click', showNextQuestion);
     elements.restartBtn.addEventListener('click', restartApp);
@@ -224,22 +122,31 @@ document.addEventListener('DOMContentLoaded', function() {
             submitAnswer();
         }
     });
-    
-    // Real-time formatting for math expressions
-    elements.answerInput.addEventListener('input', function() {
-        if (state.useRealTimeFormatting) {
-            updateFormattedPreview();
-        }
-    });
 
-    // Settings Event Listeners
-    elements.settingsBtn.addEventListener('click', openSettings);
-    elements.closeModal.addEventListener('click', closeSettings);
-    elements.darkModeToggle.addEventListener('change', toggleDarkMode);
-    elements.timeScoringToggle.addEventListener('change', toggleTimeScoring);
-    elements.realTimeFormattingToggle.addEventListener('change', toggleRealTimeFormatting);
-    elements.adaptiveMasteryToggle.addEventListener('change', toggleAdaptiveMastery);
-    elements.consecutiveCorrectInput.addEventListener('change', updateConsecutiveCorrect);
+    // Settings Event Listeners - Fix for settings button
+    if (elements.settingsBtn) {
+        elements.settingsBtn.addEventListener('click', openSettings);
+    }
+    
+    if (elements.closeModal) {
+        elements.closeModal.addEventListener('click', closeSettings);
+    }
+    
+    if (elements.darkModeToggle) {
+        elements.darkModeToggle.addEventListener('change', toggleDarkMode);
+    }
+    
+    if (elements.timeScoringToggle) {
+        elements.timeScoringToggle.addEventListener('change', toggleTimeScoring);
+    }
+    
+    if (elements.adaptiveMasteryToggle) {
+        elements.adaptiveMasteryToggle.addEventListener('change', toggleAdaptiveMastery);
+    }
+    
+    if (elements.consecutiveCorrectInput) {
+        elements.consecutiveCorrectInput.addEventListener('change', updateConsecutiveCorrect);
+    }
 
     // Close settings when clicking outside the modal
     window.addEventListener('click', function(event) {
@@ -248,13 +155,169 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Initialize presets
+    fetchPresetFiles();
+
+    // Function to fetch preset files
+    function fetchPresetFiles() {
+        // This would typically be a server request to get available files
+        // For this example, we'll simulate with a timeout
+
+        // Show loading state
+        if (elements.presetsContainer) {
+            elements.presetsContainer.innerHTML = '<div class="preset-loading">Loading presets...</div>';
+        }
+
+        setTimeout(() => {
+            // Simulated response with preset files
+            // In a real implementation, this would come from a server endpoint
+            const presetFiles = [
+                { name: 'Math Basics', filename: 'math_basics.csv', description: 'Addition, subtraction, multiplication and division' },
+                { name: 'Algebra Fundamentals', filename: 'algebra.csv', description: 'Equations, variables and expressions' },
+                { name: 'Science Quiz', filename: 'science.csv', description: 'Biology, chemistry and physics concepts' },
+                { name: 'Geography Capitals', filename: 'capitals.csv', description: 'Countries and their capital cities' },
+                { name: 'History Facts', filename: 'history.csv', description: 'Major historical events and dates' }
+            ];
+
+            // Store presets in state
+            state.availablePresets = presetFiles;
+
+            // If we're on the presets screen, display them
+            if (elements.screens.presets.classList.contains('active')) {
+                displayPresetFiles();
+            }
+        }, 500);
+    }
+
+    // Function to display preset files
+    function displayPresetFiles() {
+        if (!elements.presetsContainer) return;
+
+        // Clear container
+        elements.presetsContainer.innerHTML = '';
+
+        if (state.availablePresets.length === 0) {
+            elements.presetsContainer.innerHTML = '<div class="preset-empty">No preset files found.</div>';
+            return;
+        }
+
+        // Create element for each preset
+        state.availablePresets.forEach(preset => {
+            const presetElement = document.createElement('div');
+            presetElement.className = 'preset-item';
+            
+            const presetName = document.createElement('h3');
+            presetName.textContent = preset.name;
+            
+            const presetDescription = document.createElement('p');
+            presetDescription.textContent = preset.description;
+            
+            const selectButton = document.createElement('button');
+            selectButton.textContent = 'Select';
+            selectButton.className = 'preset-select-btn';
+            selectButton.addEventListener('click', () => loadPresetFile(preset.filename));
+            
+            presetElement.appendChild(presetName);
+            presetElement.appendChild(presetDescription);
+            presetElement.appendChild(selectButton);
+            
+            elements.presetsContainer.appendChild(presetElement);
+        });
+    }
+
+    // Function to show presets screen
+    function showPresetsScreen() {
+        showScreen('presets');
+        displayPresetFiles();
+    }
+
+    // Function to load a preset file
+    function loadPresetFile(filename) {
+        console.log(`Loading preset file: ${filename}`);
+        
+        // Show loading state
+        elements.presetsContainer.innerHTML = '<div class="preset-loading">Loading questions from preset...</div>';
+        
+        // This would typically be a server request to get the file content
+        // For this example, we'll simulate with a timeout and sample data based on the filename
+        
+        setTimeout(() => {
+            // Simulated CSV content based on filename
+            let csvContent = '';
+            
+            // Generate appropriate sample content based on filename
+            if (filename.includes('math')) {
+                csvContent = "Question,Answer,Category,Time,Difficulty\n";
+                csvContent += "What is 5 + 3?,8,basic_addition,5,easy\n";
+                csvContent += "What is 7 - 4?,3,basic_subtraction,5,easy\n";
+                csvContent += "What is 9 × 6?,54,multiplication,8,medium\n";
+                csvContent += "What is 20 ÷ 4?,5,division,8,medium\n";
+                csvContent += "What is 2^3?,8,exponents,7,medium\n";
+                csvContent += "What is 1/2 + 1/4?,3/4,fractions,10,medium\n";
+            } else if (filename.includes('algebra')) {
+                csvContent = "Question,Answer,Category,Time,Difficulty\n";
+                csvContent += "Solve: 2x + 3 = 7,2,linear_equations,12,medium\n";
+                csvContent += "Solve: 3x - 5 = 10,5,linear_equations,12,medium\n";
+                csvContent += "Factor: x^2 + 5x + 6,(x+2)(x+3),factoring,15,hard\n";
+                csvContent += "Evaluate: 3x when x = 4,12,evaluation,8,easy\n";
+            } else if (filename.includes('capitals')) {
+                csvContent = "Question,Answer,Options,Category,Time,Difficulty\n";
+                csvContent += "What is the capital of France?,Paris,London;Berlin;Madrid;Paris,geography,8,easy\n";
+                csvContent += "What is the capital of Japan?,Tokyo,Beijing;Seoul;Tokyo;Shanghai,geography,8,easy\n";
+                csvContent += "What is the capital of Australia?,Canberra,Sydney;Melbourne;Canberra;Perth,geography,10,hard\n";
+                csvContent += "What is the capital of Brazil?,Brasília,Rio de Janeiro;São Paulo;Brasília;Buenos Aires,geography,10,medium\n";
+            } else if (filename.includes('science')) {
+                csvContent = "Question,Answer,Options,Category,Time,Difficulty\n";
+                csvContent += "What is the chemical symbol for gold?,Au,Ag;Au;Fe;Gd,science,6,medium\n";
+                csvContent += "Which planet is closest to the sun?,Mercury,Venus;Mercury;Earth;Mars,science,7,easy\n";
+                csvContent += "What is the largest mammal on Earth?,Blue Whale,Elephant;Blue Whale;Giraffe;Polar Bear,science,6,medium\n";
+                csvContent += "Which element has the atomic number 1?,Hydrogen,Helium;Carbon;Oxygen;Hydrogen,science,8,hard\n";
+            } else if (filename.includes('history')) {
+                csvContent = "Question,Answer,Options,Category,Time,Difficulty\n";
+                csvContent += "In which year did World War II end?,1945,1939;1943;1945;1950,history,7,medium\n";
+                csvContent += "Who was the first president of the United States?,George Washington,Thomas Jefferson;George Washington;Abraham Lincoln;John Adams,history,8,easy\n";
+                csvContent += "When was the Declaration of Independence signed?,1776,1776;1787;1789;1800,history,7,easy\n";
+                csvContent += "What year did the Berlin Wall fall?,1989,1979;1985;1989;1991,history,9,medium\n";
+            } else {
+                // Generic fallback content
+                csvContent = "Question,Answer,Category,Time,Difficulty\n";
+                csvContent += "Sample Question 1,Answer 1,general,10,medium\n";
+                csvContent += "Sample Question 2,Answer 2,general,10,medium\n";
+                csvContent += "Sample Question 3,Answer 3,general,10,medium\n";
+            }
+            
+            // Parse the CSV content
+            try {
+                const parseResult = parseCSV(csvContent);
+                state.questions = parseResult.questions;
+                state.isMCQ = parseResult.isMCQ;
+                
+                // Reset state categories
+                state.categories = {};
+                state.categoryPerformance = {};
+                
+                // Initialize categories and start
+                initializeCategories();
+                startStudySession();
+            } catch (error) {
+                console.error("Error parsing preset:", error);
+                elements.presetsContainer.innerHTML = '<div class="preset-empty">Error loading preset: ' + error.message + '</div>';
+            }
+            
+        }, 800);
+    }
+
     // Settings functions
     function openSettings() {
-        elements.settingsModal.style.display = 'block';
+        if (elements.settingsModal) {
+            elements.settingsModal.style.display = 'block';
+        }
     }
 
     function closeSettings() {
-        elements.settingsModal.style.display = 'none';
+        if (elements.settingsModal) {
+            elements.settingsModal.style.display = 'none';
+        }
     }
 
     function toggleDarkMode() {
@@ -266,27 +329,17 @@ document.addEventListener('DOMContentLoaded', function() {
         state.useTimeScoring = elements.timeScoringToggle.checked;
     }
     
-    function toggleRealTimeFormatting() {
-        state.useRealTimeFormatting = elements.realTimeFormattingToggle.checked;
-        if (state.useRealTimeFormatting) {
-            updateFormattedPreview();
-        } else {
-            elements.formattedAnswerPreview.innerHTML = '';
-            elements.answerInput.classList.remove('format-active');
-        }
-    }
-    
     function toggleAdaptiveMastery() {
         state.useAdaptiveMastery = elements.adaptiveMasteryToggle.checked;
     }
     
     function updateConsecutiveCorrect() {
         const value = parseInt(elements.consecutiveCorrectInput.value);
-        if (value >= 3 && value <= 30) {
+        if (value >= 5 && value <= 30) {
             state.requiredCorrectAnswers = value;
-        } else if (value < 3) {
-            elements.consecutiveCorrectInput.value = 3;
-            state.requiredCorrectAnswers = 3;
+        } else if (value < 5) {
+            elements.consecutiveCorrectInput.value = 5;
+            state.requiredCorrectAnswers = 5;
         } else {
             elements.consecutiveCorrectInput.value = 30;
             state.requiredCorrectAnswers = 30;
@@ -554,46 +607,6 @@ document.addEventListener('DOMContentLoaded', function() {
         return newArray;
     }
 
-    // Function to start with sample math questions
-    function startWithSampleMath() {
-        console.log("Starting with sample math questions");
-        // Reset state categories
-        state.categories = {};
-        state.categoryPerformance = {};
-        
-        // Create a deep copy of the sample questions
-        state.questions = JSON.parse(JSON.stringify(sampleMathQuestions));
-        state.isMCQ = false;
-        
-        // Initialize categories and start
-        initializeCategories();
-        startStudySession();
-    }
-    
-    // Function to start with sample MCQ questions
-    function startWithSampleMCQ() {
-        console.log("Starting with sample multiple choice questions");
-        // Reset state categories
-        state.categories = {};
-        state.categoryPerformance = {};
-        
-        // Create a deep copy of the sample questions
-        state.questions = JSON.parse(JSON.stringify(sampleMCQuestions));
-        
-        // Convert options from string to array if needed
-        state.questions.forEach(q => {
-            if (typeof q.options === 'string') {
-                q.options = q.options.split(';');
-            }
-        });
-        
-        state.isMCQ = true;
-        
-        // Initialize categories and start
-        initializeCategories();
-        startStudySession();
-    }
-
     // Function to initialize categories from questions
     function initializeCategories() {
         // Extract unique categories
@@ -792,8 +805,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Reset answer input and preview
         elements.answerInput.value = '';
-        elements.formattedAnswerPreview.innerHTML = '';
-        elements.answerInput.classList.remove('format-active');
+        if (elements.formattedAnswerPreview) {
+            elements.formattedAnswerPreview.innerHTML = '';
+        }
+        if (elements.answerInput) {
+            elements.answerInput.classList.remove('format-active');
+        }
         
         // Set up for MCQ or FRQ
         if (state.isMCQ) {

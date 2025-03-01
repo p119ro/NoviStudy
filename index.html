@@ -18,16 +18,24 @@
         </header>
         
         <main>
+            <!-- Welcome Screen -->
             <div id="welcome-screen" class="screen active">
                 <h2>Welcome to QuickStudy</h2>
                 <p>Master your tests with confidence</p>
                 <div class="file-upload">
-                    <p>Upload your question set CSV or use our sample questions:</p>
-                    <input type="file" id="csv-upload" accept=".csv">
-                    <div class="sample-buttons">
-                        <button id="start-sample-math">Sample Math Questions</button>
-                        <button id="start-sample-mcq">Sample Multiple Choice</button>
+                    <p>Upload your question set CSV or use a preset:</p>
+                    
+                    <div class="upload-options">
+                        <label for="csv-upload" class="upload-btn">
+                            Choose File
+                            <input type="file" id="csv-upload" accept=".csv">
+                        </label>
+                        
+                        <span class="or-divider">OR</span>
+                        
+                        <button id="use-preset-btn" class="preset-btn">Use Preset</button>
                     </div>
+                    
                     <div class="format-info">
                         <p>Supported CSV formats:</p>
                         <div class="format-tabs">
@@ -35,24 +43,33 @@
                             <button class="format-tab" data-target="mcq-format">Multiple Choice</button>
                         </div>
                         <div id="frq-format" class="format-content active">
-                            <code>question,answer,category,difficulty</code>
-                            <p>Example: "What is 3^2 + 4?",13,algebra,medium</p>
+                            <code>question,answer,category,time,difficulty</code>
+                            <p>Example: "What is 3^2 + 4?",13,algebra,10,medium</p>
                         </div>
                         <div id="mcq-format" class="format-content">
-                            <code>question,correct_answer,wrong_answer_1,wrong_answer_2,wrong_answer_3,category,difficulty</code>
-                            <p>Example: "What is the capital of France?,Paris,London,Berlin,Madrid,geography,easy"</p>
+                            <code>question,correct_answer,options,category,time,difficulty</code>
+                            <p>Example: "What is the capital of France?,Paris,London;Berlin;Madrid;Paris,geography,8,easy"</p>
                         </div>
                     </div>
                 </div>
             </div>
             
-            <div id="settings-screen" class="screen">
-                <h2>Set Target Times</h2>
-                <p>Set your target completion time for each category (in seconds):</p>
-                <div id="category-time-settings"></div>
-                <button id="start-study">Start Studying</button>
+            <!-- Presets Screen -->
+            <div id="presets-screen" class="screen">
+                <div class="screen-header">
+                    <h2>Select a Preset</h2>
+                    <button id="preset-back-btn" class="back-btn">
+                        <span class="back-arrow">&#8592;</span> Back
+                    </button>
+                </div>
+                
+                <div id="presets-container" class="presets-container">
+                    <!-- Presets will be loaded here dynamically -->
+                    <div class="preset-loading">Loading presets...</div>
+                </div>
             </div>
             
+            <!-- Study Screen -->
             <div id="study-screen" class="screen">
                 <div class="progress-container">
                     <div class="progress-info">
@@ -118,6 +135,7 @@
                 </div>
             </div>
             
+            <!-- Feedback Screen -->
             <div id="feedback-screen" class="screen">
                 <div id="answer-feedback"></div>
                 <div id="time-feedback"></div>
@@ -132,6 +150,7 @@
                 <button id="next-question">Next Question</button>
             </div>
             
+            <!-- Results Screen -->
             <div id="results-screen" class="screen">
                 <h2>Your Results</h2>
                 
@@ -192,17 +211,6 @@
                     <label for="time-scoring-toggle">Time-based Scoring</label>
                     <label class="switch">
                         <input type="checkbox" id="time-scoring-toggle" checked>
-                        <span class="slider round"></span>
-                    </label>
-                </div>
-            </div>
-            
-            <div class="settings-group">
-                <h3>Input Options</h3>
-                <div class="settings-option">
-                    <label for="real-time-formatting-toggle">Real-Time Math Formatting</label>
-                    <label class="switch">
-                        <input type="checkbox" id="real-time-formatting-toggle" checked>
                         <span class="slider round"></span>
                     </label>
                 </div>
