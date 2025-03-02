@@ -1,5 +1,26 @@
 // Main application logic
 document.addEventListener('DOMContentLoaded', function() {
+    console.log("DOM Content Loaded");
+    
+    // Check if QuickStudyAI is available
+    console.log("QuickStudyAI availability check:", !!window.QuickStudyAI);
+    
+    if (!window.QuickStudyAI) {
+        console.error("QuickStudyAI not initialized. Check if answer-comparison.js is loaded correctly.");
+        
+        // Create a fallback if missing
+        window.QuickStudyAI = {
+            compareAnswers: function(userAnswer, expectedAnswer, question, callback) {
+                console.log("Using fallback answer comparison");
+                // Simple exact match
+                callback(userAnswer.trim().toLowerCase() === expectedAnswer.trim().toLowerCase());
+            }
+        };
+        console.log("Created fallback QuickStudyAI");
+    } else {
+        console.log("QuickStudyAI initialized successfully");
+    }
+    
     // App state
     const state = {
         questions: [],
@@ -124,6 +145,11 @@ document.addEventListener('DOMContentLoaded', function() {
             submitAnswer();
         }
     });
+    
+    // Real-time answer formatting for math notation
+    if (elements.answerInput) {
+        elements.answerInput.addEventListener('input', updateFormattedPreview);
+    }
 
     // Settings Event Listeners
     if (elements.settingsBtn) {
@@ -194,13 +220,13 @@ document.addEventListener('DOMContentLoaded', function() {
             presetFiles.push({
                 name: 'AP Stats Unit 9 Test',
                 filename: 'presets/apstatsunit9.csv',
-                description: 'Basic chemistry questions'
+                description: 'Stats test prep'
             });
 
             presetFiles.push({
                 name: 'AP Physics Unit 4 Test',
                 filename: 'presets/apphysicsunit4.csv',
-                description: 'Basic chemistry questions'
+                description: 'Physics test prep'
             });
             
             // Store presets in state
@@ -272,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function() {
         elements.presetsContainer.innerHTML = '<div class="preset-loading">Loading questions from preset...</div>';
         
         try {
-            // Use fetch API to load the CSV file from the server instead of window.fs.readFile
+            // Use fetch API to load the CSV file from the server
             const response = await fetch(filename);
             
             if (!response.ok) {
@@ -286,6 +312,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 const parseResult = parseCSV(csvData);
                 state.questions = parseResult.questions;
                 state.isMCQ = parseResult.isMCQ;
+                
+                console.log("Parsed questions:", state.questions);
+                console.log("Question type:", state.isMCQ ? "Multiple Choice" : "Free Response");
                 
                 // Reset state categories
                 state.categories = {};
@@ -792,7 +821,7 @@ document.addEventListener('DOMContentLoaded', function() {
         elements.questionDisplay.textContent = currentQuestion.question;
         
         // Render math with KaTeX
-        if (window.katex) {
+        if (window.katex && window.renderMathInElement) {
             renderMathInElement(elements.questionDisplay, {
                 delimiters: [
                     {left: "\\(", right: "\\)", display: false}
@@ -876,7 +905,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // If option contains math expressions, render with KaTeX
             if (/(\d+)\/(\d+)/.test(option) || /(\d+)\^(\d+)/.test(option)) {
                 optionElement.textContent = formatMathEquation(option);
-                if (window.katex) {
+                if (window.katex && window.renderMathInElement) {
                     renderMathInElement(optionElement, {
                         delimiters: [
                             {left: "\\(", right: "\\)", display: false}
@@ -1045,6 +1074,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        console.log("Submit answer clicked");
+        
         const timeTaken = stopTimer();
         const currentQuestion = state.questions[state.currentQuestionIndex];
         
@@ -1052,6 +1083,8 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error("No current question found during submit");
             return;
         }
+        
+        console.log("Current question:", currentQuestion);
         
         const category = currentQuestion.category;
         const difficulty = currentQuestion.difficulty || 'medium';
@@ -1071,15 +1104,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
+            console.log("MCQ answer selected:", userAnswer);
+            console.log("Correct answer:", currentQuestion.answer);
+            
             // MCQ is always exact match
             processAnswerResult(userAnswer === currentQuestion.answer, timeTaken, targetTime, timeScore);
         } else {
             userAnswer = elements.answerInput.value.trim();
+            console.log("FRQ answer entered:", userAnswer);
+            console.log("Correct answer:", currentQuestion.answer);
             
             // Update UI to show we're processing
             elements.submitAnswer.textContent = "Evaluating...";
             elements.submitAnswer.disabled = true;
             state.isProcessingAnswer = true;
+            
+            console.log("Checking if QuickStudyAI is available");
+            console.log("window.QuickStudyAI exists:", !!window.QuickStudyAI);
             
             // Use AI to evaluate the FRQ answer
             if (window.QuickStudyAI && typeof window.QuickStudyAI.compareAnswers === 'function') {
@@ -1089,27 +1130,46 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Clean the question text for sending to the API (remove KaTeX formatting)
                 const cleanQuestion = currentQuestion.question.replace(/\\[\(\)]/g, '').replace(/\\frac{(\d+)}{(\d+)}/g, '$1/$2').replace(/(\d+)\^{(\d+)}/g, '$1^$2');
                 
-                window.QuickStudyAI.compareAnswers(
-                    userAnswer, 
-                    currentQuestion.answer,
-                    cleanQuestion,
-                    function(isCorrect) {
-                        // Reset UI
-                        elements.submitAnswer.textContent = "Submit";
-                        elements.submitAnswer.disabled = false;
-                        state.isProcessingAnswer = false;
-                        
-                        // Process the result
-                        processAnswerResult(isCorrect, timeTaken, targetTime, timeScore);
-                    }
-                );
+                try {
+                    window.QuickStudyAI.compareAnswers(
+                        userAnswer, 
+                        currentQuestion.answer,
+                        cleanQuestion,
+                        function(isCorrect) {
+                            console.log("Answer evaluation result:", isCorrect);
+                            
+                            // Reset UI
+                            elements.submitAnswer.textContent = "Submit";
+                            elements.submitAnswer.disabled = false;
+                            state.isProcessingAnswer = false;
+                            
+                            // Process the result
+                            processAnswerResult(isCorrect, timeTaken, targetTime, timeScore);
+                        }
+                    );
+                } catch (error) {
+                    console.error("Error calling QuickStudyAI.compareAnswers:", error);
+                    // Reset UI
+                    elements.submitAnswer.textContent = "Submit";
+                    elements.submitAnswer.disabled = false;
+                    state.isProcessingAnswer = false;
+                    
+                    // Fall back to exact match
+                    console.log("Falling back to exact match due to error");
+                    const isExactMatch = userAnswer.trim().toLowerCase() === currentQuestion.answer.trim().toLowerCase();
+                    processAnswerResult(isExactMatch, timeTaken, targetTime, timeScore);
+                }
             } else {
-                // No AI comparison available, fallback to exact match
                 console.warn("AI comparison not available, using exact match");
+                
                 elements.submitAnswer.textContent = "Submit";
                 elements.submitAnswer.disabled = false;
                 state.isProcessingAnswer = false;
-                processAnswerResult(userAnswer === currentQuestion.answer, timeTaken, targetTime, timeScore);
+                
+                // Fall back to exact match
+                const isExactMatch = userAnswer.trim().toLowerCase() === currentQuestion.answer.trim().toLowerCase();
+                console.log("Exact match comparison result:", isExactMatch);
+                processAnswerResult(isExactMatch, timeTaken, targetTime, timeScore);
             }
         }
     }
@@ -1133,11 +1193,13 @@ document.addEventListener('DOMContentLoaded', function() {
             state.categories[category].correct++;
             elements.answerFeedback.textContent = 'Correct! Great job!';
             elements.answerFeedback.className = 'correct';
+            console.log(`Correct answers: ${state.correctAnswers}, Category ${category} correct: ${state.categories[category].correct}`);
         } else {
             state.incorrectAnswers++;
             state.categories[category].incorrect++;
             elements.answerFeedback.textContent = `Incorrect. The correct answer is: ${currentQuestion.answer}`;
             elements.answerFeedback.className = 'incorrect';
+            console.log(`Incorrect answers: ${state.incorrectAnswers}, Category ${category} incorrect: ${state.categories[category].incorrect}`);
         }
         
         // Update category stats
