@@ -28,7 +28,9 @@ document.addEventListener('DOMContentLoaded', function() {
         isDarkMode: false,
         useTimeScoring: true,
         useAdaptiveMastery: true,
-        requiredCorrectAnswers: 10
+        requiredCorrectAnswers: 10,
+        // Answer processing state
+        isProcessingAnswer: false
     };
 
     // DOM elements
@@ -180,6 +182,24 @@ document.addEventListener('DOMContentLoaded', function() {
             presetFiles.push({
                 name: 'Chemistry',
                 filename: 'presets/chemistry.csv',
+                description: 'Basic chemistry questions'
+            });
+
+            presetFiles.push({
+                name: 'AP Calculus Unit 6 Test',
+                filename: 'presets/apcalcunit6.csv',
+                description: 'Calc test prep'
+            });
+
+            presetFiles.push({
+                name: 'AP Stats Unit 9 Test',
+                filename: 'presets/apstatsunit9.csv',
+                description: 'Basic chemistry questions'
+            });
+
+            presetFiles.push({
+                name: 'AP Physics Unit 4 Test',
+                filename: 'presets/apphysicsunit4.csv',
                 description: 'Basic chemistry questions'
             });
             
@@ -1020,6 +1040,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to submit answer
     function submitAnswer() {
+        // If we're already processing an answer, don't allow another submission
+        if (state.isProcessingAnswer) {
+            return;
+        }
+        
         const timeTaken = stopTimer();
         const currentQuestion = state.questions[state.currentQuestionIndex];
         
@@ -1045,14 +1070,57 @@ document.addEventListener('DOMContentLoaded', function() {
                 startTimer();
                 return;
             }
+            
+            // MCQ is always exact match
+            processAnswerResult(userAnswer === currentQuestion.answer, timeTaken, targetTime, timeScore);
         } else {
             userAnswer = elements.answerInput.value.trim();
+            
+            // Update UI to show we're processing
+            elements.submitAnswer.textContent = "Evaluating...";
+            elements.submitAnswer.disabled = true;
+            state.isProcessingAnswer = true;
+            
+            // Use AI to evaluate the FRQ answer
+            if (window.QuickStudyAI && typeof window.QuickStudyAI.compareAnswers === 'function') {
+                // Add spinner or loading indicator to submit button
+                elements.submitAnswer.innerHTML = '<span class="processing-indicator"></span> Evaluating...';
+                
+                // Clean the question text for sending to the API (remove KaTeX formatting)
+                const cleanQuestion = currentQuestion.question.replace(/\\[\(\)]/g, '').replace(/\\frac{(\d+)}{(\d+)}/g, '$1/$2').replace(/(\d+)\^{(\d+)}/g, '$1^$2');
+                
+                window.QuickStudyAI.compareAnswers(
+                    userAnswer, 
+                    currentQuestion.answer,
+                    cleanQuestion,
+                    function(isCorrect) {
+                        // Reset UI
+                        elements.submitAnswer.textContent = "Submit";
+                        elements.submitAnswer.disabled = false;
+                        state.isProcessingAnswer = false;
+                        
+                        // Process the result
+                        processAnswerResult(isCorrect, timeTaken, targetTime, timeScore);
+                    }
+                );
+            } else {
+                // No AI comparison available, fallback to exact match
+                console.warn("AI comparison not available, using exact match");
+                elements.submitAnswer.textContent = "Submit";
+                elements.submitAnswer.disabled = false;
+                state.isProcessingAnswer = false;
+                processAnswerResult(userAnswer === currentQuestion.answer, timeTaken, targetTime, timeScore);
+            }
         }
-        
-        const isCorrect = userAnswer === currentQuestion.answer;
+    }
+    
+    // Process the answer result (after AI evaluation if applicable)
+    function processAnswerResult(isCorrect, timeTaken, targetTime, timeScore) {
+        const currentQuestion = state.questions[state.currentQuestionIndex];
+        const category = currentQuestion.category;
         const isWithinTimeLimit = timeTaken <= targetTime;
         
-        console.log("Answer submitted:", userAnswer, "Correct:", isCorrect, 
+        console.log("Answer evaluated:", isCorrect ? "Correct" : "Incorrect", 
                     "Time:", timeTaken, "Target:", targetTime, 
                     "Within limit:", isWithinTimeLimit, "Score:", timeScore);
         

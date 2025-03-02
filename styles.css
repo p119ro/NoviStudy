@@ -1790,3 +1790,34 @@ input:checked + .slider:before {
         align-self: flex-start;
     }
 }
+
+/* Add these styles to your existing styles.css file */
+
+/* Processing indicator animation */
+.processing-indicator {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 1s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Disabled button style */
+button:disabled {
+    background-color: #7f8c8d;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.dark-mode button:disabled {
+    background-color: #546e7a;
+}
