@@ -371,6 +371,7 @@ button:hover {
     flex-direction: column;
     align-items: center;
     margin: 5px;
+    min-width: 120px;
 }
 
 .mastery-progress {
@@ -483,9 +484,9 @@ button:hover {
 }
 
 @keyframes badgePulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
+    0% { transform: scale(1); box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); }
+    50% { transform: scale(1.05); box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3); }
+    100% { transform: scale(1); box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); }
 }
 
 .badge-icon {
@@ -507,10 +508,11 @@ button:hover {
     margin: 30px 0;
     text-align: center;
     min-height: 60px;
-    padding: 15px;
+    padding: 20px;
     border-radius: var(--border-radius);
     background-color: white;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    line-height: 1.6;
 }
 
 .dark-mode #question-display {
@@ -518,61 +520,120 @@ button:hover {
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
-/* Free response question */
-#frq-container {
+/* UPDATED: Math Input Container and Preview */
+.math-input-container {
     position: relative;
-    margin-bottom: 15px;
+    margin-bottom: 20px; /* Increased margin for larger input */
 }
 
-#formatted-answer-preview {
+.math-preview {
     position: absolute;
-    top: 12px;
+    top: 16px; /* Adjusted for larger input */
     left: 15px;
     right: 15px;
     pointer-events: none;
-    color: transparent;
-    z-index: 1;
-    white-space: pre;
+    z-index: 2;
+    font-size: 1.1rem;
+    line-height: 1.5;
     overflow: hidden;
+    color: #333; /* Black text instead of blue */
+    white-space: pre;
+    min-height: 24px; /* Minimum height for preview */
 }
 
-.formatted-math {
-    color: var(--primary-color) !important;
-    background-color: rgba(52, 152, 219, 0.1);
-    border-radius: 3px;
-    padding: 0 3px;
+.dark-mode .math-preview {
+    color: #fff; /* White text for dark mode */
 }
 
-.dark-mode .formatted-math {
-    background-color: rgba(52, 152, 219, 0.2);
-}
-
-#answer-input {
+.math-input {
     width: 100%;
-    padding: 12px 15px;
+    padding: 16px 15px; /* Increased padding for larger input */
     border: 2px solid #e0e0e0;
     border-radius: 5px;
     font-size: 1.1rem;
-    background-color: transparent;
+    background-color: white;
     position: relative;
-    z-index: 0;
-    transition: var(--transition);
+    z-index: 1;
+    transition: all 0.3s ease;
+    color: transparent; /* Make the input text transparent */
+    caret-color: #333; /* Keep the cursor visible */
+    white-space: pre;
+    min-height: 120px; /* Much taller input box */
+    resize: vertical; /* Allow user to resize vertically */
 }
 
-.dark-mode #answer-input {
+.dark-mode .math-input {
     background-color: #2c3e50;
     border-color: #546e7a;
-    color: white;
+    caret-color: #fff; /* Keep the cursor visible in dark mode */
 }
 
-#answer-input:focus {
+.math-input::placeholder {
+    color: #999; /* Keep placeholder visible */
+}
+
+.dark-mode .math-input::placeholder {
+    color: #777;
+}
+
+.math-input:focus {
     border-color: var(--primary-color);
     outline: none;
     box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
 }
 
-.dark-mode #answer-input:focus {
+.dark-mode .math-input:focus {
     box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.4);
+}
+
+/* Math Display Styles (Desmos-like) */
+.fraction {
+    display: inline-block;
+    vertical-align: middle;
+    text-align: center;
+    font-size: 1em;
+    margin: 0 2px;
+    line-height: 1.3;
+}
+
+.fraction .numerator {
+    display: block;
+    padding: 0 3px;
+    border-bottom: 1px solid;
+    margin-bottom: 1px;
+}
+
+.fraction .denominator {
+    display: block;
+    padding: 0 3px;
+}
+
+.power {
+    display: inline-block;
+    vertical-align: super;
+    font-size: 0.7em;
+    margin-left: 2px;
+}
+
+.sqrt-content {
+    display: inline-block;
+    padding-top: 1px;
+    border-top: 1px solid;
+}
+
+.paren-open, .paren-close {
+    color: inherit;
+}
+
+/* Display placeholder only when input is empty */
+.math-input-container.has-content .math-input::placeholder {
+    color: transparent;
+}
+
+/* Ensure preview and input are perfectly aligned */
+.math-preview, .math-input {
+    font-family: 'Arial', sans-serif;
+    letter-spacing: normal;
 }
 
 /* Multiple choice styles */
@@ -583,8 +644,14 @@ button:hover {
 .mcq-options {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 10px;
-    margin-bottom: 15px;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+@media (max-width: 600px) {
+    .mcq-options {
+        grid-template-columns: 1fr;
+    }
 }
 
 .mcq-option {
@@ -593,8 +660,12 @@ button:hover {
     border: 2px solid #e0e0e0;
     border-radius: var(--border-radius);
     cursor: pointer;
-    transition: var(--transition);
+    transition: all 0.3s ease;
     text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60px;
 }
 
 .dark-mode .mcq-option {
@@ -615,6 +686,7 @@ button:hover {
 .mcq-option.selected {
     background-color: rgba(52, 152, 219, 0.1);
     border-color: var(--primary-color);
+    font-weight: bold;
 }
 
 .dark-mode .mcq-option.selected {
@@ -831,6 +903,182 @@ button:hover {
     background-color: rgba(231, 76, 60, 0.2);
     color: var(--danger-color);
     border-left: 4px solid var(--danger-color);
+}
+
+/* Improved Feedback Actions */
+.feedback-actions {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+#see-explanation {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+#see-explanation:hover {
+    background-color: var(--primary-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+#see-explanation:disabled {
+    background-color: #95a5a6;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Improved Explanation Container */
+#explanation-container {
+    background-color: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin: 20px 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+    max-height: 600px; /* Increased height */
+    overflow-y: auto;
+    border-left: 4px solid var(--primary-color);
+    text-align: left;
+}
+
+.dark-mode #explanation-container {
+    background-color: #3d4b5c;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.explanation-loading {
+    text-align: center;
+    padding: 20px;
+    color: #7f8c8d;
+}
+
+.dark-mode .explanation-loading {
+    color: #bdc3c7;
+}
+
+#explanation-content {
+    font-size: 1rem;
+    line-height: 1.7;
+}
+
+/* Support for Markdown Bold/Italic in explanations */
+#explanation-content .bold {
+    font-weight: bold;
+}
+
+#explanation-content .italic {
+    font-style: italic;
+}
+
+#explanation-content .underline {
+    text-decoration: underline;
+}
+
+#explanation-content h2 {
+    color: var(--primary-color);
+    font-size: 1.4rem;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 8px;
+}
+
+.dark-mode #explanation-content h2 {
+    border-bottom-color: #546e7a;
+}
+
+#explanation-content h3 {
+    color: #2c3e50;
+    font-size: 1.2rem;
+    margin: 18px 0 10px;
+    font-weight: 600;
+}
+
+.dark-mode #explanation-content h3 {
+    color: #ecf0f1;
+}
+
+#explanation-content p {
+    margin-bottom: 12px;
+}
+
+#explanation-content ul, #explanation-content ol {
+    margin: 15px 0;
+    padding-left: 25px;
+}
+
+#explanation-content li {
+    margin-bottom: 8px;
+}
+
+#explanation-content code {
+    background-color: #f0f0f0;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+.dark-mode #explanation-content code {
+    background-color: #2c3e50;
+}
+
+#explanation-content blockquote {
+    border-left: 3px solid var(--primary-color);
+    padding-left: 15px;
+    margin: 15px 0;
+    color: #555;
+    font-style: italic;
+}
+
+.dark-mode #explanation-content blockquote {
+    color: #bbb;
+}
+
+/* Math in explanations */
+#explanation-content .katex {
+    font-size: 1.1em;
+}
+
+#explanation-content .math-block {
+    display: block;
+    text-align: center;
+    padding: 10px;
+    margin: 15px 0;
+    overflow-x: auto;
+}
+
+/* Step by step solutions */
+.solution-step {
+    padding: 10px;
+    margin: 8px 0;
+    border-left: 3px solid var(--primary-color);
+    background-color: rgba(52, 152, 219, 0.05);
+    border-radius: 0 5px 5px 0;
+}
+
+.dark-mode .solution-step {
+    background-color: rgba(52, 152, 219, 0.1);
+}
+
+/* Highlights for key concepts */
+.key-concept {
+    background-color: rgba(46, 204, 113, 0.1);
+    padding: 10px 15px;
+    margin: 15px 0;
+    border-radius: 5px;
+    border-left: 3px solid var(--success-color);
+}
+
+.dark-mode .key-concept {
+    background-color: rgba(46, 204, 113, 0.15);
 }
 
 /* Mastery Feedback */
@@ -1101,51 +1349,22 @@ footer {
 }
 
 .settings-option {
+    padding: 10px 0 15px;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 0;
+    flex-direction: column;
+    align-items: flex-start;
 }
 
-.setting-description {
-    width: 100%;
-    font-size: 0.9rem;
-    color: #7f8c8d;
-    margin-top: 5px;
+.settings-option label {
+    margin-bottom: 8px;
 }
 
-.dark-mode .setting-description {
-    color: #bdc3c7;
-}
-
-.settings-number-input {
-    padding: 8px 12px;
-    border: 2px solid #e0e0e0;
-    border-radius: 5px;
-    font-size: 0.9rem;
-    width: 80px;
-    text-align: center;
-    transition: var(--transition);
-}
-
-.dark-mode .settings-number-input {
-    background-color: #2c3e50;
-    border-color: #546e7a;
-    color: white;
-}
-
-.settings-number-input:focus {
-    border-color: var(--primary-color);
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-}
-
-/* Toggle Switch */
 .switch {
     position: relative;
     display: inline-block;
     width: 60px;
     height: 34px;
+    margin-bottom: 8px;
 }
 
 .switch input {
@@ -1196,6 +1415,41 @@ input:checked + .slider:before {
     border-radius: 50%;
 }
 
+.setting-description {
+    margin-top: 6px;
+    font-size: 0.9rem;
+    color: #7f8c8d;
+    width: 100%;
+    line-height: 1.4;
+}
+
+.dark-mode .setting-description {
+    color: #bdc3c7;
+}
+
+/* Settings number input improvements */
+.settings-number-input {
+    padding: 8px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    width: 80px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.dark-mode .settings-number-input {
+    background-color: #2c3e50;
+    border-color: #546e7a;
+    color: white;
+}
+
+.settings-number-input:focus {
+    border-color: var(--primary-color);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
 /* Floating Settings Button */
 .floating-btn {
     position: fixed;
@@ -1238,348 +1492,34 @@ input:checked + .slider:before {
     margin: 0.5em 0 !important;
 }
 
-/* Responsive Styles */
-@media (max-width: 768px) {
-    .app-container {
-        padding: 10px;
-    }
-    
-    header h1 {
-        font-size: 2rem;
-    }
-    
-    main {
-        padding: 15px;
-    }
-    
-    .progress-info {
-        flex-direction: column;
-        align-items: center;
-    }
-    
-    .progress-info span {
-        margin-bottom: 5px;
-    }
-    
-    .stats-container {
-        flex-direction: column;
-    }
-    
-    .stat-box {
-        margin: 5px 0;
-        width: 100%;
-    }
-    
-    .category-time-setting {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    
-    .category-name {
-        margin-bottom: 10px;
-    }
-    
-    .category-time-input {
-        width: 100%;
-        margin-bottom: 10px;
-    }
-    
-    .modal-content {
-        width: 95%;
-        margin: 10% auto;
-        padding: 20px;
-    }
-    
-    #question-display {
-        font-size: 1.3rem;
-        padding: 10px;
-    }
-    
-    .mcq-options {
-        grid-template-columns: 1fr;
-    }
-    
-    .settings-option {
-        flex-direction: column;
-        align-items: flex-start;
-        padding: 15px 0;
-    }
-    
-    .switch {
-        margin-top: 10px;
-    }
+/* Processing indicator animation */
+.processing-indicator {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    border-top-color: white;
+    animation: spin 1s linear infinite;
+    margin-right: 8px;
+    vertical-align: middle;
 }
 
-/* Add these styles to your CSS file to fix the real-time formatting overlap issue */
-
-/* Handle the input and preview overlay correctly */
-#frq-container {
-    position: relative;
-    margin-bottom: 15px;
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
-#formatted-answer-preview {
-    position: absolute;
-    top: 12px;
-    left: 15px;
-    right: 15px;
-    pointer-events: none;
-    z-index: 1;
-    white-space: pre;
-    overflow: hidden;
-    font-family: inherit;
-    font-size: inherit;
-    line-height: inherit;
+/* Disabled button style */
+button:disabled {
+    background-color: #7f8c8d;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
 }
 
-/* Default input text is visible */
-#answer-input {
-    background-color: transparent;
-    position: relative;
-    z-index: 0;
+.dark-mode button:disabled {
+    background-color: #546e7a;
 }
-
-/* When formatting is active, make input text visible but hide portions with formatted math */
-.format-active {
-    color: inherit;
-}
-
-/* Style for formatted math sections */
-.formatted-math {
-    color: var(--primary-color) !important;
-    background-color: rgba(52, 152, 219, 0.1);
-    border-radius: 3px;
-    padding: 0 3px;
-}
-
-/* Apply styles to create transparent text behind formatted sections */
-#answer-input::selection {
-    background-color: rgba(52, 152, 219, 0.2);
-    color: inherit;
-}
-
-.dark-mode .formatted-math {
-    background-color: rgba(52, 152, 219, 0.2);
-}
-
-/* Add these CSS updates to fix the identified issues */
-
-/* Fix slider UI overlap in settings panel */
-.settings-option {
-    padding: 10px 0 15px;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-}
-
-.settings-option label {
-    margin-bottom: 8px;
-}
-
-.switch {
-    margin-bottom: 8px;
-}
-
-.setting-description {
-    margin-top: 6px;
-    font-size: 0.9rem;
-    color: #7f8c8d;
-    width: 100%;
-    line-height: 1.4;
-}
-
-.dark-mode .setting-description {
-    color: #bdc3c7;
-}
-
-/* Settings number input improvements */
-.settings-number-input {
-    padding: 8px 12px;
-    border: 2px solid #e0e0e0;
-    border-radius: 5px;
-    font-size: 0.9rem;
-    width: 80px;
-    text-align: center;
-    transition: all 0.3s ease;
-}
-
-.dark-mode .settings-number-input {
-    background-color: #2c3e50;
-    border-color: #546e7a;
-    color: white;
-}
-
-.settings-number-input:focus {
-    border-color: var(--primary-color);
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
-}
-
-/* Fix for real-time math formatting */
-#frq-container {
-    position: relative;
-    margin-bottom: 15px;
-}
-
-#formatted-answer-preview {
-    position: absolute;
-    top: 12px;
-    left: 15px;
-    right: 15px;
-    pointer-events: none;
-    z-index: 5;
-    white-space: pre;
-    overflow: hidden;
-    font-family: inherit;
-    font-size: inherit;
-    line-height: inherit;
-}
-
-#answer-input {
-    position: relative;
-    background-color: transparent;
-    z-index: 1;
-}
-
-/* Only when formatting is active */
-#answer-input.format-active {
-    color: transparent;
-    text-shadow: 0 0 0 transparent;
-    -webkit-text-fill-color: transparent;
-}
-
-/* Maintains cursor visibility in format mode */
-#answer-input.format-active::selection {
-    background-color: rgba(52, 152, 219, 0.2);
-}
-
-.formatted-math {
-    color: var(--primary-color) !important;
-    background-color: rgba(52, 152, 219, 0.1);
-    border-radius: 3px;
-    padding: 0 3px;
-}
-
-.dark-mode .formatted-math {
-    background-color: rgba(52, 152, 219, 0.2);
-}
-
-/* Consistency improvements for mastery displays */
-#mastery-indicator {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin: 5px;
-    min-width: 120px;
-}
-
-.mastery-progress {
-    width: 100%;
-    height: 6px;
-    background-color: #ecf0f1;
-    border-radius: 3px;
-    overflow: hidden;
-    margin-top: 5px;
-}
-
-.dark-mode .mastery-progress {
-    background-color: #455a64;
-}
-
-.mastery-progress-fill {
-    height: 100%;
-    width: 0%;
-    background-color: var(--success-color);
-    transition: width 0.5s ease;
-}
-
-/* MCQ formatting for semicolon-separated options */
-.mcq-options {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 12px;
-    margin-bottom: 16px;
-}
-
-@media (max-width: 600px) {
-    .mcq-options {
-        grid-template-columns: 1fr;
-    }
-}
-
-.mcq-option {
-    padding: 15px;
-    background-color: white;
-    border: 2px solid #e0e0e0;
-    border-radius: var(--border-radius);
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-align: center;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 60px;
-}
-
-.dark-mode .mcq-option {
-    background-color: #2c3e50;
-    border-color: #546e7a;
-}
-
-.mcq-option:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    border-color: var(--primary-color);
-}
-
-.dark-mode .mcq-option:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-}
-
-.mcq-option.selected {
-    background-color: rgba(52, 152, 219, 0.1);
-    border-color: var(--primary-color);
-    font-weight: bold;
-}
-
-.dark-mode .mcq-option.selected {
-    background-color: rgba(52, 152, 219, 0.3);
-}
-
-/* Mastery badge animation improvements */
-#mastery-badge {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    background-color: var(--mastery-color);
-    color: white;
-    padding: 5px 10px;
-    border-radius: 15px;
-    font-weight: bold;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    animation: badgePulse 2s infinite;
-    z-index: 10;
-}
-
-@keyframes badgePulse {
-    0% { transform: scale(1); box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); }
-    50% { transform: scale(1.05); box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3); }
-    100% { transform: scale(1); box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2); }
-}
-
-.badge-icon {
-    font-size: 1.2rem;
-}
-
-.badge-text {
-    font-size: 0.8rem;
-    letter-spacing: 1px;
-}
-
-/* Add these styles for the preset feature */
 
 /* Upload options styling */
 .upload-options {
@@ -1791,33 +1731,163 @@ input:checked + .slider:before {
     }
 }
 
-/* Add these styles to your existing styles.css file */
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .app-container {
+        padding: 10px;
+    }
+    
+    header h1 {
+        font-size: 2rem;
+    }
+    
+    main {
+        padding: 15px;
+    }
+    
+    .progress-info {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .progress-info span {
+        margin-bottom: 5px;
+    }
+    
+    .stats-container {
+        flex-direction: column;
+    }
+    
+    .stat-box {
+        margin: 5px 0;
+        width: 100%;
+    }
+    
+    .category-time-setting {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .category-name {
+        margin-bottom: 10px;
+    }
+    
+    .category-time-input {
+        width: 100%;
+        margin-bottom: 10px;
+    }
+    
+    .modal-content {
+        width: 95%;
+        margin: 10% auto;
+        padding: 20px;
+    }
+    
+    #question-display {
+        font-size: 1.3rem;
+        padding: 10px;
+    }
+    
+    .settings-option {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 15px 0;
+    }
+    
+    .switch {
+        margin-top: 10px;
+    }
 
-/* Processing indicator animation */
-.processing-indicator {
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    border-top-color: white;
-    animation: spin 1s linear infinite;
+    /* Adjust math input for mobile */
+    .math-input {
+        min-height: 80px;
+    }
+}
+
+/* Add these styles to your stylesheet for better answer formatting */
+
+/* Formatted answer in incorrect feedback */
+.formatted-answer {
+    background-color: rgba(255, 255, 255, 0.9);
+    padding: 12px 15px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    margin-top: 10px;
+    font-size: 1rem;
+    line-height: 1.5;
+    text-align: left;
+}
+
+.dark-mode .formatted-answer {
+    background-color: rgba(52, 73, 94, 0.9);
+    border-color: #546e7a;
+}
+
+.formatted-answer p {
+    margin-bottom: 8px;
+}
+
+.formatted-answer ul, .formatted-answer ol {
+    margin: 8px 0;
+    padding-left: 25px;
+}
+
+.formatted-answer li {
+    margin-bottom: 4px;
+}
+
+/* Number formatting for multi-part answers */
+.formatted-answer .part-number {
+    font-weight: bold;
+    color: var(--primary-color);
     margin-right: 8px;
-    vertical-align: middle;
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
+/* Step formatting for multi-step solutions */
+.formatted-answer .step {
+    display: block;
+    margin: 6px 0;
+    border-left: 3px solid var(--primary-color);
+    padding-left: 10px;
 }
 
-/* Disabled button style */
-button:disabled {
-    background-color: #7f8c8d;
-    cursor: not-allowed;
-    transform: none !important;
-    box-shadow: none !important;
+/* Math expression formatting */
+.formatted-answer .math {
+    font-family: 'Times New Roman', Times, serif;
+    font-style: italic;
 }
 
-.dark-mode button:disabled {
-    background-color: #546e7a;
+/* Variable highlighting in questions */
+.variable {
+    font-style: italic;
+    color: var(--primary-dark);
+}
+
+.dark-mode .variable {
+    color: #64b5f6;
+}
+
+/* Equation formatting in questions */
+.question-equation {
+    display: inline-block;
+    margin: 0 3px;
+    font-family: 'Times New Roman', Times, serif;
+}
+
+/* Feedback screen improvements */
+#answer-feedback {
+    text-align: left;
+    padding: 18px;
+}
+
+#answer-feedback.incorrect {
+    background-color: rgba(231, 76, 60, 0.1);
+    color: var(--danger-color);
+    border-left: 4px solid var(--danger-color);
+}
+
+#answer-feedback.incorrect > div:first-child {
+    font-size: 1.3rem;
+    margin-bottom: 12px;
+    font-weight: 600;
 }

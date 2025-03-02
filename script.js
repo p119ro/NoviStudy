@@ -14,12 +14,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log("Using fallback answer comparison");
                 // Simple exact match
                 callback(userAnswer.trim().toLowerCase() === expectedAnswer.trim().toLowerCase());
+            },
+            getExplanation: function(userAnswer, expectedAnswer, question, wasCorrect, callback) {
+                console.log("Using fallback explanation");
+                callback(getDefaultExplanation(userAnswer, expectedAnswer, question, wasCorrect));
             }
         };
         console.log("Created fallback QuickStudyAI");
     } else {
         console.log("QuickStudyAI initialized successfully");
     }
+
+    // Variable to track the current question and answer state for explanations
+    let currentExplanationState = {
+        question: '',
+        userAnswer: '',
+        correctAnswer: '',
+        wasCorrect: false
+    };
     
     // App state
     const state = {
@@ -80,8 +92,8 @@ document.addEventListener('DOMContentLoaded', function() {
         frqContainer: document.getElementById('frq-container'),
         mcqContainer: document.getElementById('mcq-container'),
         mcqOptions: document.getElementById('mcq-options'),
-        formattedAnswerPreview: document.getElementById('formatted-answer-preview'),
-        answerInput: document.getElementById('answer-input'),
+        mathPreview: null, // Will be set in setupMathInput
+        answerInput: null, // Will be set in setupMathInput
         submitAnswer: document.getElementById('submit-answer'),
         correctCount: document.getElementById('correct-count'),
         incorrectCount: document.getElementById('incorrect-count'),
@@ -98,6 +110,11 @@ document.addEventListener('DOMContentLoaded', function() {
         categoryResults: document.getElementById('category-results-container'),
         finalMasteryFeedback: document.getElementById('final-mastery-feedback'),
         restartBtn: document.getElementById('restart-btn'),
+        // New elements for explanation feature
+        seeExplanation: document.getElementById('see-explanation'),
+        explanationContainer: document.getElementById('explanation-container'),
+        explanationLoading: document.querySelector('.explanation-loading'),
+        explanationContent: document.getElementById('explanation-content'),
         // Settings elements
         settingsBtn: document.getElementById('settings-btn'),
         settingsModal: document.getElementById('settings-modal'),
@@ -135,21 +152,12 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Study screen event listeners
-    elements.submitAnswer.addEventListener('click', submitAnswer);
-    elements.nextQuestion.addEventListener('click', showNextQuestion);
-    elements.restartBtn.addEventListener('click', restartApp);
+    elements.submitAnswer && elements.submitAnswer.addEventListener('click', submitAnswer);
+    elements.nextQuestion && elements.nextQuestion.addEventListener('click', showNextQuestion);
+    elements.restartBtn && elements.restartBtn.addEventListener('click', restartApp);
     
-    // Keyboard input events
-    elements.answerInput.addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            submitAnswer();
-        }
-    });
-    
-    // Real-time answer formatting for math notation
-    if (elements.answerInput) {
-        elements.answerInput.addEventListener('input', updateFormattedPreview);
-    }
+    // Explanation feature event listener
+    elements.seeExplanation && elements.seeExplanation.addEventListener('click', showExplanation);
 
     // Settings Event Listeners
     if (elements.settingsBtn) {
@@ -183,8 +191,199 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    // Set up the improved math input
+    setupMathInput();
+
     // Initialize presets
     fetchPresetFiles();
+
+    // Function to set up the improved math input
+    function setupMathInput() {
+        // Create a new math input container to replace the standard input
+        const frqContainer = elements.frqContainer;
+        if (!frqContainer) return;
+        
+        // Clear existing content
+        frqContainer.innerHTML = '';
+        
+        // Create new math input elements
+        const mathInputContainer = document.createElement('div');
+        mathInputContainer.className = 'math-input-container';
+        
+        const mathPreview = document.createElement('div');
+        mathPreview.className = 'math-preview';
+        mathPreview.id = 'math-preview';
+        
+        // Use textarea instead of input for larger input area
+        const mathInput = document.createElement('textarea');
+        mathInput.className = 'math-input';
+        mathInput.id = 'answer-input';
+        mathInput.placeholder = 'Your answer...';
+        mathInput.autocomplete = 'off'; // Disable autocomplete
+        mathInput.spellcheck = false;   // Disable spellcheck
+        
+        // Add event listeners
+        mathInput.addEventListener('input', updateMathPreview);
+        mathInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                // Ctrl+Enter to submit
+                submitAnswer();
+            }
+            if (e.key === 'Tab') {
+                // Tab key for indentation
+                e.preventDefault();
+                const start = this.selectionStart;
+                const end = this.selectionEnd;
+                
+                // Add tab at cursor position
+                this.value = this.value.substring(0, start) + '\t' + this.value.substring(end);
+                
+                // Move cursor after tab
+                this.selectionStart = this.selectionEnd = start + 1;
+                
+                // Update preview
+                updateMathPreview();
+            }
+        });
+        
+        mathInput.addEventListener('focus', function() {
+            mathInputContainer.classList.add('focused');
+        });
+        
+        mathInput.addEventListener('blur', function() {
+            mathInputContainer.classList.remove('focused');
+        });
+        
+        // Append elements
+        mathInputContainer.appendChild(mathPreview);
+        mathInputContainer.appendChild(mathInput);
+        frqContainer.appendChild(mathInputContainer);
+        
+        // Add a note about Ctrl+Enter
+        const submitNote = document.createElement('div');
+        submitNote.className = 'submit-note';
+        submitNote.textContent = 'Press Ctrl+Enter to submit';
+        submitNote.style.fontSize = '0.8rem';
+        submitNote.style.textAlign = 'right';
+        submitNote.style.color = '#999';
+        submitNote.style.marginTop = '5px';
+        submitNote.style.marginBottom = '10px';
+        frqContainer.appendChild(submitNote);
+        
+        // Update elements object
+        elements.answerInput = mathInput;
+        elements.mathPreview = mathPreview;
+        elements.mathInputContainer = mathInputContainer;
+        
+        console.log("Math input system set up");
+    }
+
+    // Function to update math preview with Desmos-like formatting
+    function updateMathPreview() {
+        const input = elements.answerInput.value;
+        const preview = elements.mathPreview;
+        const container = elements.mathInputContainer;
+        
+        if (!input || !preview) {
+            if (preview) preview.innerHTML = '';
+            if (container) container.classList.remove('has-content');
+            return;
+        }
+        
+        // Indicate that we have content (used for CSS)
+        if (container) container.classList.add('has-content');
+        
+        // Process the input to create Desmos-like formatting
+        let formattedInput = processMathInput(input);
+        
+        // Set the preview content
+        preview.innerHTML = formattedInput;
+    }
+
+    // Process math input to create Desmos-like formatting
+    function processMathInput(input) {
+        // Split input by lines and process each line
+        const lines = input.split('\n');
+        const processedLines = lines.map(line => {
+            // First, check if line contains any math expressions
+            if (!/[\/\^\(\)\[\]\{\}sqrt]/.test(line)) {
+                return line; // No special formatting needed
+            }
+            
+            // Handle complex fractions like 4/(2+x)
+            let result = line.replace(/(\d+|\([^)]+\))\s*\/\s*(\d+|\([^)]+\))/g, function(match, p1, p2) {
+                return `<span class="fraction"><span class="numerator">${p1}</span><span class="denominator">${p2}</span></span>`;
+            });
+            
+            // Handle simpler fractions like 1/2
+            result = result.replace(/(\d+)\s*\/\s*(\d+)(?!\w)/g, function(match, p1, p2) {
+                return `<span class="fraction"><span class="numerator">${p1}</span><span class="denominator">${p2}</span></span>`;
+            });
+            
+            // Handle powers/exponents
+            result = result.replace(/(\d+|\w)\^(\d+|\w)/g, function(match, base, exp) {
+                return `${base}<span class="power">${exp}</span>`;
+            });
+            
+            // Handle roots/square roots
+            result = result.replace(/sqrt\(([^)]+)\)/g, function(match, content) {
+                return `√<span class="sqrt-content">${content}</span>`;
+            });
+            
+            // Handle parentheses with different colors
+            result = result.replace(/\(/g, '<span class="paren-open">(</span>');
+            result = result.replace(/\)/g, '<span class="paren-close">)</span>');
+            
+            return result;
+        });
+        
+        // Join lines back with line breaks for HTML
+        return processedLines.join('<br>');
+    }
+
+    // Function to format markdown in explanations
+    function formatMarkdown(text) {
+        if (!text) return '';
+        
+        // Format bold with ** or __
+        text = text.replace(/\*\*(.*?)\*\*|__(.*?)__/g, '<span class="bold">$1$2</span>');
+        
+        // Format italic with * or _
+        text = text.replace(/\*(.*?)\*|_(.*?)_/g, '<span class="italic">$1$2</span>');
+        
+        // Format headers
+        text = text.replace(/^# (.*?)$/gm, '<h2>$1</h2>');
+        text = text.replace(/^## (.*?)$/gm, '<h3>$1</h3>');
+        text = text.replace(/^### (.*?)$/gm, '<h4>$1</h4>');
+        
+        // Format lists
+        text = text.replace(/^\* (.*?)$/gm, '<li>$1</li>');
+        text = text.replace(/^- (.*?)$/gm, '<li>$1</li>');
+        text = text.replace(/^(\d+)\. (.*?)$/gm, '<li>$2</li>');
+        
+        // Wrap lists in ul or ol
+        text = text.replace(/(<li>.*?<\/li>)\n(?!<li>)/gs, '<ul>$1</ul>\n');
+        
+        // Format code blocks
+        text = text.replace(/```([^`]+)```/g, '<pre><code>$1</code></pre>');
+        
+        // Format inline code
+        text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+        
+        // Format blockquotes
+        text = text.replace(/^> (.*?)$/gm, '<blockquote>$1</blockquote>');
+        
+        // Add step-by-step solution class
+        text = text.replace(/Step (\d+):(.*?)(?=Step \d+:|$)/gs, '<div class="solution-step"><strong>Step $1:</strong>$2</div>');
+        
+        // Add key concept class
+        text = text.replace(/Key Concept:(.*?)(?=\n\n|$)/gs, '<div class="key-concept"><strong>Key Concept:</strong>$1</div>');
+        
+        // Replace newlines with <br> for HTML rendering
+        text = text.replace(/\n/g, '<br>');
+        
+        return text;
+    }
 
     // Function to fetch preset files from the 'presets' folder
     async function fetchPresetFiles() {
@@ -372,103 +571,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Function to update real-time formatted preview
-    function updateFormattedPreview() {
-        const input = elements.answerInput.value;
-        
-        // Only process if there's input
-        if (!input) {
-            elements.formattedAnswerPreview.innerHTML = '';
-            elements.answerInput.classList.remove('format-active');
-            return;
-        }
-        
-        // Create a pattern to match only fractions and exponents
-        const fractionPattern = /(\d+)\/(\d+)/g;
-        const exponentPattern = /(\d+)\^(\d+)/g;
-        
-        // Check if we have any patterns to format
-        const hasFractions = fractionPattern.test(input);
-        // Reset regex lastIndex
-        fractionPattern.lastIndex = 0;
-        
-        const hasExponents = exponentPattern.test(input);
-        // Reset regex lastIndex
-        exponentPattern.lastIndex = 0;
-        
-        if (!hasFractions && !hasExponents) {
-            // No math expressions to format, clear preview
-            elements.formattedAnswerPreview.innerHTML = '';
-            elements.answerInput.classList.remove('format-active');
-            return;
-        }
-        
-        // We have math expressions to format
-        elements.answerInput.classList.add('format-active');
-        
-        // Start with a copy of the input
-        let result = input;
-        
-        // Create a temporary span to hold the content
-        const tempSpan = document.createElement('span');
-        tempSpan.textContent = result;
-        
-        // Replace fractions
-        if (hasFractions) {
-            result = result.replace(fractionPattern, function(match, p1, p2) {
-                return `<span class="formatted-math" data-original="${match}">${p1}/${p2}</span>`;
-            });
-        }
-        
-        // Replace exponents
-        if (hasExponents) {
-            result = result.replace(exponentPattern, function(match, p1, p2) {
-                return `<span class="formatted-math" data-original="${match}">${p1}<sup>${p2}</sup></span>`;
-            });
-        }
-        
-        // Set the formatted HTML
-        elements.formattedAnswerPreview.innerHTML = result;
-        
-        // Create a mapping of original character positions to formatted positions
-        const origToFormattedMap = new Map();
-        let formattedIndex = 0;
-        
-        // Make a styled version that hides the original text behind formatting
-        const style = document.createElement('style');
-        style.id = 'math-format-style';
-        
-        // Remove any existing style
-        const existingStyle = document.getElementById('math-format-style');
-        if (existingStyle) {
-            existingStyle.remove();
-        }
-        
-        // Get all formatted spans
-        const formattedSpans = elements.formattedAnswerPreview.querySelectorAll('.formatted-math');
-        
-        if (formattedSpans.length > 0) {
-            // Create style to hide input text where formatted math appears
-            let styleText = '';
-            formattedSpans.forEach(span => {
-                const orig = span.getAttribute('data-original');
-                const startPos = input.indexOf(orig);
-                if (startPos >= 0) {
-                    styleText += `
-                        #answer-input.format-active::placeholder {
-                            color: transparent;
-                        }
-                    `;
-                }
-            });
-            
-            if (styleText) {
-                style.textContent = styleText;
-                document.head.appendChild(style);
-            }
-        }
-    }
-
     // Function to handle CSV file upload
     function handleCSVUpload(e) {
         const file = e.target.files[0];
@@ -605,18 +707,30 @@ document.addEventListener('DOMContentLoaded', function() {
         return result;
     }
 
-    // Function to format math equations for display
+    // Function to format math equations for display (improved)
     function formatMathEquation(text) {
-        // Check if this is a math expression that needs formatting
-        if (/(\d+)\/(\d+)/.test(text) || /(\d+)\^(\d+)/.test(text)) {
-            // Replace fractions with proper KaTeX notation
-            let formatted = text.replace(/(\d+)\/(\d+)/g, '\\frac{$1}{$2}');
+        // First, process any LaTeX that might be in the text
+        if (text.includes('\\') || text.includes('frac')) {
+            return text; // Already has LaTeX formatting
+        }
+        
+        // Check if this contains math expressions
+        if (/(\d+)\/(\d+)|\^|sqrt|\(|\)/.test(text)) {
+            // Replace fractions
+            let formatted = text.replace(/(\d+)\s*\/\s*(\d+)/g, '\\frac{$1}{$2}');
             
-            // Replace exponents with proper KaTeX notation
-            formatted = formatted.replace(/(\d+)\^(\d+)/g, '$1^{$2}');
+            // Replace exponents
+            formatted = formatted.replace(/(\d+|\w)\^(\d+|\w)/g, '$1^{$2}');
             
-            // Wrap in KaTeX delimiters
-            return `\\(${formatted}\\)`;
+            // Replace sqrt
+            formatted = formatted.replace(/sqrt\(([^)]+)\)/g, '\\sqrt{$1}');
+            
+            // Wrap in KaTeX delimiters if not already wrapped
+            if (!formatted.includes('\\(')) {
+                formatted = `\\(${formatted}\\)`;
+            }
+            
+            return formatted;
         }
         
         // If not a math expression, return the original text
@@ -788,7 +902,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return state.currentQuestionIndex;
     }
 
-    // Function to load the current question
+    // Function to load the current question - IMPROVED FOR MATH DISPLAY
     function loadQuestion() {
         // Get the next unmastered question index
         const nextIndex = getNextQuestion();
@@ -810,6 +924,10 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        // Store the current question for explanation
+        currentExplanationState.question = currentQuestion.question;
+        currentExplanationState.correctAnswer = currentQuestion.answer;
+        
         // Check if the category is mastered
         const category = currentQuestion.category;
         const isCategoryMastered = state.categories[category].isMastered;
@@ -817,25 +935,56 @@ document.addEventListener('DOMContentLoaded', function() {
         // Show or hide mastery badge
         elements.mastery.classList.toggle('hidden', !isCategoryMastered);
         
-        // Display the question - Use KaTeX to render the equation
-        elements.questionDisplay.textContent = currentQuestion.question;
-        
-        // Render math with KaTeX
-        if (window.katex && window.renderMathInElement) {
-            renderMathInElement(elements.questionDisplay, {
-                delimiters: [
-                    {left: "\\(", right: "\\)", display: false}
-                ]
-            });
+        // Display the question with improved variable formatting
+        if (window.QuickStudyAI && typeof window.QuickStudyAI.formatQuestionText === 'function') {
+            // Show placeholder while loading
+            elements.questionDisplay.textContent = "Loading question...";
+            
+            // Use Gemini to format the question
+            window.QuickStudyAI.formatQuestionText(
+                currentQuestion.question,
+                function(formattedQuestion) {
+                    // Display the formatted question
+                    elements.questionDisplay.innerHTML = formattedQuestion;
+                    
+                    // Render math with KaTeX or MathJax
+                    if (window.katex && window.renderMathInElement) {
+                        renderMathInElement(elements.questionDisplay, {
+                            delimiters: [
+                                {left: "\\(", right: "\\)", display: false},
+                                {left: "\\[", right: "\\]", display: true},
+                                {left: "$", right: "$", display: false}
+                            ]
+                        });
+                    } else if (window.MathJax) {
+                        window.MathJax.typeset([elements.questionDisplay]);
+                    }
+                }
+            );
+        } else {
+            // Fallback to regular question display
+            elements.questionDisplay.textContent = currentQuestion.question;
+            
+            // Render math with KaTeX or MathJax
+            if (window.katex && window.renderMathInElement) {
+                renderMathInElement(elements.questionDisplay, {
+                    delimiters: [
+                        {left: "\\(", right: "\\)", display: false},
+                        {left: "\\[", right: "\\]", display: true}
+                    ]
+                });
+            } else if (window.MathJax) {
+                window.MathJax.typeset([elements.questionDisplay]);
+            }
         }
         
         // Reset answer input and preview
-        elements.answerInput.value = '';
-        if (elements.formattedAnswerPreview) {
-            elements.formattedAnswerPreview.innerHTML = '';
-        }
         if (elements.answerInput) {
-            elements.answerInput.classList.remove('format-active');
+            elements.answerInput.value = '';
+        }
+        
+        if (elements.mathPreview) {
+            elements.mathPreview.innerHTML = '';
         }
         
         // Set up for MCQ or FRQ
@@ -847,10 +996,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // Clear selected option
             state.selectedMCQOption = null;
             
-            // Generate MCQ options
+            // Generate MCQ options with improved math rendering
             let options = currentQuestion.options;
             if (Array.isArray(options) && !options.includes(currentQuestion.answer)) {
-                // Make sure the correct answer is included in the options
                 options.push(currentQuestion.answer);
             }
             generateMCQOptions(options, currentQuestion.answer);
@@ -858,7 +1006,11 @@ document.addEventListener('DOMContentLoaded', function() {
             // Show FRQ container, hide MCQ container
             elements.frqContainer.classList.remove('hidden');
             elements.mcqContainer.classList.add('hidden');
-            elements.answerInput.focus();
+            
+            // Make sure we're using the enhanced math input
+            if (elements.answerInput) {
+                elements.answerInput.focus();
+            }
         }
         
         // Show category, difficulty, and target time
@@ -877,13 +1029,16 @@ document.addEventListener('DOMContentLoaded', function() {
         elements.progressFill.style.width = `${progress}%`;
         elements.questionCounter.textContent = `Question ${state.currentQuestionIndex + 1}/${state.questions.length}`;
         
+        // Reset explanation state for new question
+        hideExplanation();
+        
         // Reset and start timer
         elapsedTime = 0;
         state.questionStartTime = Date.now();
         startTimer();
     }
     
-    // Function to generate MCQ options
+    // Function to generate MCQ options - IMPROVED FOR MATH RENDERING
     function generateMCQOptions(options, correctAnswer) {
         // Clear previous options
         elements.mcqOptions.innerHTML = '';
@@ -900,18 +1055,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const optionElement = document.createElement('div');
             optionElement.className = 'mcq-option';
             optionElement.dataset.value = option;
-            optionElement.textContent = option;
             
-            // If option contains math expressions, render with KaTeX
-            if (/(\d+)\/(\d+)/.test(option) || /(\d+)\^(\d+)/.test(option)) {
-                optionElement.textContent = formatMathEquation(option);
-                if (window.katex && window.renderMathInElement) {
-                    renderMathInElement(optionElement, {
-                        delimiters: [
-                            {left: "\\(", right: "\\)", display: false}
-                        ]
-                    });
-                }
+            // If option contains math expressions, use the equation class for styling
+            if (/(\d+)\/(\d+)|\^|sqrt|\(|\)/.test(option)) {
+                const formattedOption = processMathInput(option);
+                optionElement.innerHTML = `<span class="equation">${formattedOption}</span>`;
+            } else {
+                optionElement.textContent = option;
             }
             
             // Add click event to select this option
@@ -1067,7 +1217,7 @@ document.addEventListener('DOMContentLoaded', function() {
         return Math.max(0, 100 - ((overTargetRatio - 1) * 100));
     }
 
-    // Function to submit answer
+    // Function to submit answer - UPDATED FOR EXPLANATION FEATURE
     function submitAnswer() {
         // If we're already processing an answer, don't allow another submission
         if (state.isProcessingAnswer) {
@@ -1107,12 +1257,21 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("MCQ answer selected:", userAnswer);
             console.log("Correct answer:", currentQuestion.answer);
             
+            // Store for explanation
+            currentExplanationState.userAnswer = userAnswer;
+            
             // MCQ is always exact match
-            processAnswerResult(userAnswer === currentQuestion.answer, timeTaken, targetTime, timeScore);
+            const isCorrect = userAnswer === currentQuestion.answer;
+            currentExplanationState.wasCorrect = isCorrect;
+            
+            processAnswerResult(isCorrect, timeTaken, targetTime, timeScore);
         } else {
             userAnswer = elements.answerInput.value.trim();
             console.log("FRQ answer entered:", userAnswer);
             console.log("Correct answer:", currentQuestion.answer);
+            
+            // Store for explanation
+            currentExplanationState.userAnswer = userAnswer;
             
             // Update UI to show we're processing
             elements.submitAnswer.textContent = "Evaluating...";
@@ -1138,6 +1297,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         function(isCorrect) {
                             console.log("Answer evaluation result:", isCorrect);
                             
+                            // Store for explanation
+                            currentExplanationState.wasCorrect = isCorrect;
+                            
                             // Reset UI
                             elements.submitAnswer.textContent = "Submit";
                             elements.submitAnswer.disabled = false;
@@ -1157,6 +1319,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Fall back to exact match
                     console.log("Falling back to exact match due to error");
                     const isExactMatch = userAnswer.trim().toLowerCase() === currentQuestion.answer.trim().toLowerCase();
+                    
+                    // Store for explanation
+                    currentExplanationState.wasCorrect = isExactMatch;
+                    
                     processAnswerResult(isExactMatch, timeTaken, targetTime, timeScore);
                 }
             } else {
@@ -1168,9 +1334,128 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Fall back to exact match
                 const isExactMatch = userAnswer.trim().toLowerCase() === currentQuestion.answer.trim().toLowerCase();
+                
+                // Store for explanation
+                currentExplanationState.wasCorrect = isExactMatch;
+                
                 console.log("Exact match comparison result:", isExactMatch);
                 processAnswerResult(isExactMatch, timeTaken, targetTime, timeScore);
             }
+        }
+    }
+    
+    // Function to show explanation
+    function showExplanation() {
+        // Show the explanation container
+        elements.explanationContainer.classList.remove('hidden');
+        
+        // Show loading state
+        elements.explanationLoading.style.display = 'block';
+        elements.explanationContent.innerHTML = '';
+        
+        // Disable the button while loading
+        elements.seeExplanation.disabled = true;
+        elements.seeExplanation.textContent = 'Loading...';
+        
+        console.log("Showing explanation for:", currentExplanationState);
+        
+        // Check if QuickStudyAI is available
+        if (window.QuickStudyAI && typeof window.QuickStudyAI.getExplanation === 'function') {
+            // Get explanation from Gemini API
+            window.QuickStudyAI.getExplanation(
+                currentExplanationState.userAnswer,
+                currentExplanationState.correctAnswer,
+                currentExplanationState.question,
+                currentExplanationState.wasCorrect,
+                function(explanation) {
+                    // Hide loading state
+                    elements.explanationLoading.style.display = 'none';
+                    
+                    // Format markdown in the explanation
+                    const formattedExplanation = formatMarkdown(explanation);
+                    
+                    // Display the explanation
+                    elements.explanationContent.innerHTML = formattedExplanation;
+                    
+                    // Re-enable the button
+                    elements.seeExplanation.disabled = false;
+                    elements.seeExplanation.textContent = 'Update Explanation';
+                    
+                    // Render any math in the explanation
+                    if (window.katex && window.renderMathInElement) {
+                        renderMathInElement(elements.explanationContent, {
+                            delimiters: [
+                                {left: "\\(", right: "\\)", display: false},
+                                {left: "\\[", right: "\\]", display: true},
+                                {left: "$", right: "$", display: false}
+                            ]
+                        });
+                    } else if (window.MathJax) {
+                        window.MathJax.typeset([elements.explanationContent]);
+                    }
+                }
+            );
+        } else {
+            // Fallback if Gemini API is not available
+            const explanation = getDefaultExplanation(
+                currentExplanationState.userAnswer,
+                currentExplanationState.correctAnswer,
+                currentExplanationState.question,
+                currentExplanationState.wasCorrect
+            );
+            
+            // Hide loading state
+            elements.explanationLoading.style.display = 'none';
+            
+            // Display the explanation
+            elements.explanationContent.innerHTML = explanation;
+            
+            // Re-enable the button
+            elements.seeExplanation.disabled = false;
+            elements.seeExplanation.textContent = 'See Explanation';
+        }
+    }
+
+    // Function to hide explanation
+    function hideExplanation() {
+        elements.explanationContainer.classList.add('hidden');
+        elements.explanationContent.innerHTML = '';
+        elements.explanationLoading.style.display = 'block';
+        elements.seeExplanation.disabled = false;
+        elements.seeExplanation.textContent = 'See Explanation';
+    }
+
+    // Default explanation generator
+    function getDefaultExplanation(userAnswer, expectedAnswer, question, wasCorrect) {
+        if (wasCorrect) {
+            return `
+<h2>Great job!</h2>
+
+<p>Your answer "${userAnswer}" is correct. The expected answer was "${expectedAnswer}".</p>
+
+<div class="solution-step"><strong>Step 1:</strong> Understand the problem and identify the appropriate approach.</div>
+<div class="solution-step"><strong>Step 2:</strong> Apply the correct formula or method.</div>
+<div class="solution-step"><strong>Step 3:</strong> Calculate the result carefully.</div>
+
+<div class="key-concept"><strong>Key Concept:</strong>
+This question tests your understanding of the specific concept being asked about. 
+Continue practicing similar problems to strengthen your understanding.</div>
+`;
+        } else {
+            return `
+<h2>Let's review this</h2>
+
+<p>Your answer was "${userAnswer}", but the correct answer is "${expectedAnswer}".</p>
+
+<div class="solution-step"><strong>Step 1:</strong> Understand what the question is asking.</div>
+<div class="solution-step"><strong>Step 2:</strong> Identify the correct approach or formula.</div>
+<div class="solution-step"><strong>Step 3:</strong> Work through the solution methodically.</div>
+<div class="solution-step"><strong>Step 4:</strong> Check your work for errors.</div>
+
+<div class="key-concept"><strong>Key Concept:</strong>
+This question tests your understanding of the specific concept being asked about.
+Make sure to review this topic in your notes or textbook.</div>
+`;
         }
     }
     
@@ -1197,8 +1482,69 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             state.incorrectAnswers++;
             state.categories[category].incorrect++;
-            elements.answerFeedback.textContent = `Incorrect. The correct answer is: ${currentQuestion.answer}`;
-            elements.answerFeedback.className = 'incorrect';
+            
+            // Improved incorrect answer formatting using Gemini
+            if (window.QuickStudyAI && typeof window.QuickStudyAI.formatCorrectAnswer === 'function') {
+                // Show placeholder while loading
+                elements.answerFeedback.textContent = 'Incorrect. Loading formatted answer...';
+                elements.answerFeedback.className = 'incorrect';
+                
+                // Use Gemini to format the correct answer
+                window.QuickStudyAI.formatCorrectAnswer(
+                    currentQuestion.answer,
+                    currentQuestion.question,
+                    function(formattedAnswer) {
+                        // Create a better formatted incorrect message
+                        const incorrectElement = document.createElement('div');
+                        
+                        // Add header
+                        const header = document.createElement('div');
+                        header.textContent = 'Incorrect';
+                        header.style.fontWeight = 'bold';
+                        header.style.marginBottom = '8px';
+                        incorrectElement.appendChild(header);
+                        
+                        // Add "The correct answer is:" text
+                        const introText = document.createElement('div');
+                        introText.textContent = 'The correct answer is:';
+                        introText.style.marginBottom = '8px';
+                        incorrectElement.appendChild(introText);
+                        
+                        // Add the formatted answer in a styled container
+                        const answerContainer = document.createElement('div');
+                        answerContainer.className = 'formatted-answer';
+                        answerContainer.innerHTML = formattedAnswer;
+                        answerContainer.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+                        answerContainer.style.padding = '8px 12px';
+                        answerContainer.style.borderRadius = '4px';
+                        answerContainer.style.border = '1px solid #ddd';
+                        incorrectElement.appendChild(answerContainer);
+                        
+                        // Update the feedback element
+                        elements.answerFeedback.innerHTML = '';
+                        elements.answerFeedback.appendChild(incorrectElement);
+                        elements.answerFeedback.className = 'incorrect';
+                        
+                        // Render math in the formatted answer
+                        if (window.katex && window.renderMathInElement) {
+                            renderMathInElement(answerContainer, {
+                                delimiters: [
+                                    {left: "\\(", right: "\\)", display: false},
+                                    {left: "\\[", right: "\\]", display: true},
+                                    {left: "$", right: "$", display: false}
+                                ]
+                            });
+                        } else if (window.MathJax) {
+                            window.MathJax.typeset([answerContainer]);
+                        }
+                    }
+                );
+            } else {
+                // Fallback to regular incorrect message
+                elements.answerFeedback.textContent = `Incorrect. The correct answer is: ${currentQuestion.answer}`;
+                elements.answerFeedback.className = 'incorrect';
+            }
+            
             console.log(`Incorrect answers: ${state.incorrectAnswers}, Category ${category} incorrect: ${state.categories[category].incorrect}`);
         }
         
@@ -1233,6 +1579,9 @@ document.addEventListener('DOMContentLoaded', function() {
         } else {
             elements.masteryFeedback.classList.add('hidden');
         }
+        
+        // Reset explanation container
+        hideExplanation();
         
         // Update stats
         updateStats();
