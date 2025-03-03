@@ -330,9 +330,6 @@ window.QuickStudyAuth = (function() {
         // Login form submission
         elements.loginForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            document.querySelector('.profile-close').addEventListener('click', function() {
-                hideAuthContainer();
-            });
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             signInWithEmailPassword(email, password);
@@ -373,6 +370,10 @@ window.QuickStudyAuth = (function() {
         // Resend verification email
         document.getElementById('resend-verification').addEventListener('click', function() {
             sendEmailVerification();
+        });
+
+        document.querySelector('.profile-close').addEventListener('click', function() {
+            hideAuthContainer();
         });
         
         // Form navigation links

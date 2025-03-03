@@ -1939,16 +1939,34 @@ button:disabled {
 
 .profile-close {
     position: absolute;
-    right: 20px;
+    right: 15px;
     top: 15px;
-    font-size: 24px;
+    font-size: 32px; /* Larger X */
     font-weight: bold;
     color: #aaa;
     cursor: pointer;
-    transition: color 0.3s ease;
+    transition: all 0.3s ease;
     z-index: 10;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: rgba(0,0,0,0.05);
 }
 
 .profile-close:hover {
-    color: var(--danger-color, #e74c3c);
+    color: white;
+    background-color: var(--danger-color, #e74c3c);
+    transform: rotate(90deg);
+}
+
+/* Dark mode styles */
+body.dark-mode .profile-close {
+    background-color: rgba(255,255,255,0.1);
+}
+
+body.dark-mode .profile-close:hover {
+    background-color: var(--danger-color, #e74c3c);
 }
