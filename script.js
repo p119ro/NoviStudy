@@ -433,7 +433,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // For now, manually add Chemistry which we know exists
             presetFiles.push({
                 name: 'AP Chemistry Unit 16',
-                filename: 'presets/chemistry.csv',
+                filename: 'presets/apchemistryunit16.csv',
                 description: 'Brønsted-Lowry and Lewis acid-base concepts'
             });
 
@@ -453,6 +453,12 @@ document.addEventListener('DOMContentLoaded', function() {
             presetFiles.push({
                 name: 'AP Physics Unit 4 Test',
                 filename: 'presets/apphysicsunit4.csv',
+                description: 'Physics test prep'
+            });
+
+            presetFiles.push({
+                name: 'AP Macro Unit 3 Test',
+                filename: 'presets/apmacrounit3.csv',
                 description: 'Physics test prep'
             });
             
