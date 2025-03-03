@@ -103,6 +103,7 @@ window.QuickStudyAuth = (function() {
             });
             
             console.log("User signed in:", user.email);
+            hideAuthContainer();
             
             // Update UI for authenticated user
             updateUIForAuthenticatedUser(user);
@@ -446,22 +447,23 @@ window.QuickStudyAuth = (function() {
     }
     
     // Sign in with Google
+    // Add these debug logs in the signInWithEmailPassword and signInWithGoogle functions
+
+    
     function signInWithGoogle() {
         hideLoginError();
         
+        console.log("Attempting Google sign-in...");
         const provider = new firebase.auth.GoogleAuthProvider();
         
         auth.signInWithPopup(provider)
             .then((result) => {
-                // This gives you a Google Access Token. You can use it to access the Google API.
-                const credential = result.credential;
-                const token = credential.accessToken;
-                // The signed-in user info.
-                const user = result.user;
-                console.log("Google sign-in successful:", user.email);
+                console.log("Google sign-in successful:", result.user.email);
+                hideAuthContainer(); // Add this to hide the container on success
             })
             .catch((error) => {
                 console.error("Google sign-in error:", error);
+                console.error("Error details:", error.code, error.message);
                 showLoginError(getAuthErrorMessage(error.code));
             });
     }
@@ -574,6 +576,14 @@ window.QuickStudyAuth = (function() {
         elements.resetPasswordContainer.classList.add('hidden');
     }
     
+    function hideAuthContainer() {
+        const authContainer = document.getElementById('auth-container');
+        if (authContainer) {
+            authContainer.classList.add('hidden');
+        }
+    }
+    
+
     // Update UI for authenticated user
     function updateUIForAuthenticatedUser(user) {
         if (!elements.profileUsername) return;
