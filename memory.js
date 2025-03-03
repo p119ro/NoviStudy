@@ -5,11 +5,14 @@
         saveProgress,
         loadProgress,
         clearProgress,
-        hasSavedProgress
+        hasSavedProgress,
+        savePreferences,
+        loadPreferences
     };
 
     // Storage prefix to avoid conflicts with other apps
     const STORAGE_PREFIX = 'quickstudy_progress_';
+    const PREFERENCES_KEY = 'quickstudy_preferences';
     
     // Data expiration time - 30 days by default (in milliseconds)
     const DATA_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000;
@@ -153,6 +156,44 @@
         } catch (error) {
             console.error("QuickStudyMemory: Error checking for saved progress:", error);
             return false;
+        }
+    }
+    
+    /**
+     * Saves user preferences to localStorage
+     * @param {Object} preferences - The user preferences to save
+     * @returns {boolean} True if successful
+     */
+    function savePreferences(preferences) {
+        try {
+            localStorage.setItem(PREFERENCES_KEY, JSON.stringify(preferences));
+            console.log("QuickStudyMemory: User preferences saved");
+            return true;
+        } catch (error) {
+            console.error("QuickStudyMemory: Error saving preferences:", error);
+            return false;
+        }
+    }
+    
+    /**
+     * Loads user preferences from localStorage
+     * @returns {Object|null} The saved preferences or null if none exist
+     */
+    function loadPreferences() {
+        try {
+            const savedPrefs = localStorage.getItem(PREFERENCES_KEY);
+            
+            if (!savedPrefs) {
+                console.log("QuickStudyMemory: No saved preferences found");
+                return null;
+            }
+            
+            const preferences = JSON.parse(savedPrefs);
+            console.log("QuickStudyMemory: Loaded user preferences");
+            return preferences;
+        } catch (error) {
+            console.error("QuickStudyMemory: Error loading preferences:", error);
+            return null;
         }
     }
     

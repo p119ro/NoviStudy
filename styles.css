@@ -2029,3 +2029,43 @@ button:disabled {
         width: 100%;
     }
 }
+
+/* Replace or update the header styles in styles.css */
+header {
+    text-align: center;
+    margin-bottom: 30px;
+    padding: 20px 0;
+    border-bottom: 2px solid var(--primary-color);
+    cursor: pointer; /* Add cursor pointer to indicate it's clickable */
+    transition: var(--transition);
+}
+
+header:hover {
+    background-color: rgba(52, 152, 219, 0.05); /* Slight highlight on hover */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+.dark-mode header:hover {
+    background-color: rgba(52, 152, 219, 0.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+/* Add a small hint about clicking the header */
+header::after {
+    content: "Click to return home";
+    display: block;
+    font-size: 0.7rem;
+    margin-top: 5px;
+    color: #999;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+header:hover::after {
+    opacity: 1;
+}
+
+.dark-mode header::after {
+    color: #bbb;
+}

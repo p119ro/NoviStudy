@@ -77,6 +77,7 @@ document.addEventListener('DOMContentLoaded', function() {
             feedback: document.getElementById('feedback-screen'),
             results: document.getElementById('results-screen')
         },
+        header: document.querySelector('header'),
         csvUpload: document.getElementById('csv-upload'),
         usePresetBtn: document.getElementById('use-preset-btn'),
         presetsContainer: document.getElementById('presets-container'),
@@ -138,6 +139,7 @@ document.addEventListener('DOMContentLoaded', function() {
     elements.csvUpload.addEventListener('change', handleCSVUpload);
     elements.usePresetBtn.addEventListener('click', showPresetsScreen);
     elements.presetBackBtn.addEventListener('click', () => showScreen('welcome'));
+    elements.header && elements.header.addEventListener('click', navigateHome);
     
     // Format tabs
     const formatTabs = document.querySelectorAll('.format-tab');
@@ -199,6 +201,58 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize presets
     fetchPresetFiles();
     
+    loadUserPreferences();
+
+    // Function to load user preferences
+    function loadUserPreferences() {
+        if (window.QuickStudyMemory && typeof window.QuickStudyMemory.loadPreferences === 'function') {
+            const savedPrefs = window.QuickStudyMemory.loadPreferences();
+            
+            if (savedPrefs) {
+                // Apply saved preferences to state
+                state.isDarkMode = savedPrefs.isDarkMode ?? false;
+                state.useTimeScoring = savedPrefs.useTimeScoring ?? true;
+                state.useAdaptiveMastery = savedPrefs.useAdaptiveMastery ?? true;
+                state.requiredCorrectAnswers = savedPrefs.requiredCorrectAnswers ?? 10;
+                
+                // Update UI to reflect saved preferences
+                if (elements.darkModeToggle) {
+                    elements.darkModeToggle.checked = state.isDarkMode;
+                    document.body.classList.toggle('dark-mode', state.isDarkMode);
+                }
+                
+                if (elements.timeScoringToggle) {
+                    elements.timeScoringToggle.checked = state.useTimeScoring;
+                }
+                
+                if (elements.adaptiveMasteryToggle) {
+                    elements.adaptiveMasteryToggle.checked = state.useAdaptiveMastery;
+                }
+                
+                if (elements.consecutiveCorrectInput) {
+                    elements.consecutiveCorrectInput.value = state.requiredCorrectAnswers;
+                }
+                
+                console.log("Loaded user preferences:", savedPrefs);
+            }
+        }
+    }
+
+    // Function to save user preferences
+    function saveUserPreferences() {
+        if (window.QuickStudyMemory && typeof window.QuickStudyMemory.savePreferences === 'function') {
+            const preferences = {
+                isDarkMode: state.isDarkMode,
+                useTimeScoring: state.useTimeScoring,
+                useAdaptiveMastery: state.useAdaptiveMastery,
+                requiredCorrectAnswers: state.requiredCorrectAnswers
+            };
+            
+            window.QuickStudyMemory.savePreferences(preferences);
+            console.log("Saved user preferences:", preferences);
+        }
+    }
+
     // Function to generate consistent preset IDs
     function generatePresetId(filename) {
         if (!filename) return '';
@@ -654,14 +708,17 @@ document.addEventListener('DOMContentLoaded', function() {
     function toggleDarkMode() {
         state.isDarkMode = elements.darkModeToggle.checked;
         document.body.classList.toggle('dark-mode', state.isDarkMode);
+        saveUserPreferences();
     }
 
     function toggleTimeScoring() {
         state.useTimeScoring = elements.timeScoringToggle.checked;
+        saveUserPreferences();
     }
     
     function toggleAdaptiveMastery() {
         state.useAdaptiveMastery = elements.adaptiveMasteryToggle.checked;
+        saveUserPreferences();
     }
     
     function updateConsecutiveCorrect() {
@@ -675,6 +732,7 @@ document.addEventListener('DOMContentLoaded', function() {
             elements.consecutiveCorrectInput.value = 30;
             state.requiredCorrectAnswers = 30;
         }
+        saveUserPreferences();
     }
 
     // Function to handle CSV file upload
@@ -2039,6 +2097,31 @@ Make sure to review this topic in your notes or textbook.</div>
             elements.screens[key].classList.remove('active');
         });
         elements.screens[screenName].classList.add('active');
+    }
+
+    // Function to navigate to home screen
+    function navigateHome() {
+        console.log("Header clicked: Navigating to home screen");
+        
+        // If we're in the middle of a study session, confirm first
+        if (elements.screens.study.classList.contains('active') || 
+            elements.screens.feedback.classList.contains('active')) {
+            
+            if (confirm("Are you sure you want to return to the home screen? Your current progress will be saved.")) {
+                // Save current progress if in the middle of a session
+                if (state.currentPresetId) {
+                    saveCurrentProgress();
+                }
+                
+                // Return to welcome screen
+                showScreen('welcome');
+                elements.csvUpload.value = '';
+            }
+        } else {
+            // Just return to welcome screen if not in a study session
+            showScreen('welcome');
+            elements.csvUpload.value = '';
+        }
     }
     
     // KaTeX helper function
