@@ -265,6 +265,7 @@ window.QuickStudyAuth = (function() {
         
         // Profile information (when logged in)
         profileContainer.innerHTML = `
+            <span class="profile-close">&times;</span>
             <div class="profile-header">
                 <div class="profile-picture-container">
                     <img id="profile-picture" src="https://via.placeholder.com/64" alt="Profile Picture">
@@ -329,6 +330,9 @@ window.QuickStudyAuth = (function() {
         // Login form submission
         elements.loginForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            document.querySelector('.profile-close').addEventListener('click', function() {
+                hideAuthContainer();
+            });
             const email = document.getElementById('login-email').value;
             const password = document.getElementById('login-password').value;
             signInWithEmailPassword(email, password);

@@ -1935,3 +1935,20 @@ button:disabled {
 .dark-mode .formatted-answer .md-italic {
     color: inherit;
 }
+
+
+.profile-close {
+    position: absolute;
+    right: 20px;
+    top: 15px;
+    font-size: 24px;
+    font-weight: bold;
+    color: #aaa;
+    cursor: pointer;
+    transition: color 0.3s ease;
+    z-index: 10;
+}
+
+.profile-close:hover {
+    color: var(--danger-color, #e74c3c);
+}
