@@ -196,6 +196,33 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize presets
     fetchPresetFiles();
+    
+    // Function to parse markdown in text
+    function parseMarkdown(text) {
+        if (!text) return text;
+        
+        // Parse bold text: **text**
+        text = text.replace(/\*\*(.*?)\*\*/g, '<span class="md-bold">$1</span>');
+        
+        // Parse italic text: *text* (but not if it's already part of a bold tag)
+        text = text.replace(/\*([^\*<>]*?)\*/g, function(match, content) {
+            // Skip if this is inside a bold tag 
+            if (match.indexOf('md-bold') !== -1) return match;
+            return '<span class="md-italic">' + content + '</span>';
+        });
+        
+        // Handle bullet points
+        text = text.replace(/^\* (.*?)$/gm, '<li>$1</li>');
+        
+        // Wrap lists in ul tags
+        if (text.includes('<li>')) {
+            text = '<ul>' + text + '</ul>';
+            // Clean up by removing any standalone ul tags
+            text = text.replace(/<ul><\/ul>/g, '');
+        }
+        
+        return text;
+    }
 
     // Function to set up the improved math input
     function setupMathInput() {
@@ -945,6 +972,9 @@ document.addEventListener('DOMContentLoaded', function() {
             window.QuickStudyAI.formatQuestionText(
                 currentQuestion.question,
                 function(formattedQuestion) {
+                    // Apply markdown formatting first
+                    formattedQuestion = parseMarkdown(formattedQuestion);
+                    
                     // Display the formatted question
                     elements.questionDisplay.innerHTML = formattedQuestion;
                     
@@ -964,7 +994,8 @@ document.addEventListener('DOMContentLoaded', function() {
             );
         } else {
             // Fallback to regular question display
-            elements.questionDisplay.textContent = currentQuestion.question;
+            const formattedQuestion = parseMarkdown(currentQuestion.question);
+            elements.questionDisplay.innerHTML = formattedQuestion;
             
             // Render math with KaTeX or MathJax
             if (window.katex && window.renderMathInElement) {
@@ -1500,16 +1531,18 @@ Make sure to review this topic in your notes or textbook.</div>
                         
                         // Add header
                         const header = document.createElement('div');
-                        header.textContent = 'Incorrect';
-                        header.style.fontWeight = 'bold';
+                        header.innerHTML = '<span class="md-bold">Incorrect</span>';
                         header.style.marginBottom = '8px';
                         incorrectElement.appendChild(header);
                         
                         // Add "The correct answer is:" text
                         const introText = document.createElement('div');
-                        introText.textContent = 'The correct answer is:';
+                        introText.innerHTML = '<span class="md-bold">The correct answer is:</span>';
                         introText.style.marginBottom = '8px';
                         incorrectElement.appendChild(introText);
+                        
+                        // Apply markdown formatting to the answer
+                        formattedAnswer = parseMarkdown(formattedAnswer);
                         
                         // Add the formatted answer in a styled container
                         const answerContainer = document.createElement('div');

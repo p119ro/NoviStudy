@@ -1891,3 +1891,47 @@ button:disabled {
     margin-bottom: 12px;
     font-weight: 600;
 }
+
+/* Markdown-style text formatting */
+.md-bold {
+    font-weight: bold;
+}
+
+.md-italic {
+    font-style: italic;
+}
+
+/* Add these styles to ensure proper display within questions */
+#question-display .md-bold {
+    font-weight: bold;
+    color: inherit;
+}
+
+#question-display .md-italic {
+    font-style: italic;
+    color: inherit;
+}
+
+/* Additional formatting for answer feedback */
+.formatted-answer .md-bold {
+    font-weight: bold;
+}
+
+.formatted-answer .md-italic {
+    font-style: italic;
+}
+
+.formatted-answer ul {
+    padding-left: 20px;
+    margin: 10px 0;
+}
+
+.formatted-answer li {
+    margin-bottom: 5px;
+    list-style-type: disc;
+}
+
+.dark-mode .formatted-answer .md-bold,
+.dark-mode .formatted-answer .md-italic {
+    color: inherit;
+}
