@@ -417,10 +417,11 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             presetFiles.push({
-                name: 'AP Stats Unit 9 Test',
-                filename: 'presets/apstatsunit9.csv',
-                description: 'Stats test prep'
+                name: 'AP Stats Unit 8 & 9 Test',
+                filename: 'presets/apstatsunit89.csv',
+                description: 'Estimating proportions with confidence & Testing claims about proportions'
             });
+
 
             presetFiles.push({
                 name: 'AP Physics Unit 4 Test',
