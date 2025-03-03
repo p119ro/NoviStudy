@@ -1,11 +1,11 @@
 // QuickStudy Authentication System
 // This file handles user authentication using Firebase
-
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 // QuickStudyAuth namespace
 window.QuickStudyAuth = (function() {
     // Firebase configuration - Using your specific Firebase project settings
     const firebaseConfig = {
-        apiKey: process.env.GEMINI_API_KEY,
+        apiKey: GEMINI_API_KEY,
         authDomain: "quickstudy-266de.firebaseapp.com",
         projectId: "quickstudy-266de",
         storageBucket: "quickstudy-266de.firebasestorage.app",
