@@ -1,4 +1,4 @@
-// memory.js - Handles saving and loading user progress using cookies
+// memory.js - Handles saving and loading user progress using localStorage
 (function() {
     // Main object to expose public methods
     window.QuickStudyMemory = {
@@ -8,11 +8,14 @@
         hasSavedProgress
     };
 
-    // Cookie expiration time - 30 days by default
-    const COOKIE_EXPIRY_DAYS = 30;
+    // Storage prefix to avoid conflicts with other apps
+    const STORAGE_PREFIX = 'quickstudy_progress_';
+    
+    // Data expiration time - 30 days by default (in milliseconds)
+    const DATA_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000;
     
     /**
-     * Saves the current user progress to cookies
+     * Saves the current user progress to localStorage
      * @param {Object} state - The application state to save
      * @param {string} presetId - Identifier for the current preset/file
      */
@@ -22,7 +25,7 @@
             return;
         }
         
-        // Only save essential state information to keep cookies small
+        // Only save essential state information
         const progressData = {
             currentQuestionIndex: state.currentQuestionIndex,
             correctAnswers: state.correctAnswers,
@@ -62,15 +65,20 @@
             });
         }
         
-        // Serialize and save data
-        const serializedData = JSON.stringify(progressData);
-        setCookie(`quickstudy_progress_${presetId}`, serializedData, COOKIE_EXPIRY_DAYS);
-        
-        console.log(`QuickStudyMemory: Progress saved for preset "${presetId}"`);
+        try {
+            // Store in localStorage
+            const storageKey = STORAGE_PREFIX + presetId;
+            localStorage.setItem(storageKey, JSON.stringify(progressData));
+            console.log(`QuickStudyMemory: Progress saved for preset "${presetId}"`);
+            return true;
+        } catch (error) {
+            console.error("QuickStudyMemory: Error saving progress:", error);
+            return false;
+        }
     }
     
     /**
-     * Loads saved progress from cookies
+     * Loads saved progress from localStorage
      * @param {string} presetId - Identifier for the preset/file to load
      * @returns {Object|null} The saved progress data or null if none exists
      */
@@ -80,13 +88,15 @@
             return null;
         }
         
-        const savedData = getCookie(`quickstudy_progress_${presetId}`);
-        if (!savedData) {
-            console.log(`QuickStudyMemory: No saved progress found for preset "${presetId}"`);
-            return null;
-        }
-        
         try {
+            const storageKey = STORAGE_PREFIX + presetId;
+            const savedData = localStorage.getItem(storageKey);
+            
+            if (!savedData) {
+                console.log(`QuickStudyMemory: No saved progress found for preset "${presetId}"`);
+                return null;
+            }
+            
             const progressData = JSON.parse(savedData);
             
             // Check if data is too old (7 days)
@@ -100,7 +110,7 @@
             console.log(`QuickStudyMemory: Loaded progress for preset "${presetId}"`);
             return progressData;
         } catch (error) {
-            console.error("QuickStudyMemory: Error parsing saved progress:", error);
+            console.error("QuickStudyMemory: Error loading saved progress:", error);
             return null;
         }
     }
@@ -115,8 +125,15 @@
             return;
         }
         
-        deleteCookie(`quickstudy_progress_${presetId}`);
-        console.log(`QuickStudyMemory: Cleared progress for preset "${presetId}"`);
+        try {
+            const storageKey = STORAGE_PREFIX + presetId;
+            localStorage.removeItem(storageKey);
+            console.log(`QuickStudyMemory: Cleared progress for preset "${presetId}"`);
+            return true;
+        } catch (error) {
+            console.error("QuickStudyMemory: Error clearing progress:", error);
+            return false;
+        }
     }
     
     /**
@@ -127,44 +144,52 @@
     function hasSavedProgress(presetId) {
         if (!presetId) return false;
         
-        const savedData = getCookie(`quickstudy_progress_${presetId}`);
-        return !!savedData;
-    }
-    
-    // Cookie Helper Functions
-    
-    /**
-     * Sets a cookie with the given name, value, and expiration days
-     */
-    function setCookie(name, value, days) {
-        const date = new Date();
-        date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-        const expires = "expires=" + date.toUTCString();
-        document.cookie = name + "=" + value + ";" + expires + ";path=/";
-    }
-    
-    /**
-     * Gets a cookie by name
-     */
-    function getCookie(name) {
-        const cookieName = name + "=";
-        const decodedCookie = decodeURIComponent(document.cookie);
-        const cookieArray = decodedCookie.split(';');
-        
-        for (let i = 0; i < cookieArray.length; i++) {
-            let cookie = cookieArray[i].trim();
-            if (cookie.indexOf(cookieName) === 0) {
-                return cookie.substring(cookieName.length, cookie.length);
-            }
+        try {
+            const storageKey = STORAGE_PREFIX + presetId;
+            const savedData = localStorage.getItem(storageKey);
+            const result = !!savedData;
+            console.log(`QuickStudyMemory: Checking for saved progress for preset "${presetId}": ${result}`);
+            return result;
+        } catch (error) {
+            console.error("QuickStudyMemory: Error checking for saved progress:", error);
+            return false;
         }
-        
-        return null;
     }
     
-    /**
-     * Deletes a cookie by name
-     */
-    function deleteCookie(name) {
-        document.cookie = name + "=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    // Helper function to clean up old saved data
+    function cleanupOldData() {
+        try {
+            const now = Date.now();
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key.startsWith(STORAGE_PREFIX)) {
+                    try {
+                        const data = JSON.parse(localStorage.getItem(key));
+                        if (data.timestamp && (now - data.timestamp > DATA_EXPIRY_MS)) {
+                            localStorage.removeItem(key);
+                            console.log(`QuickStudyMemory: Removed expired data for key ${key}`);
+                        }
+                    } catch (e) {
+                        // If data is corrupted, remove it
+                        localStorage.removeItem(key);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("Error cleaning up old data:", error);
+        }
+    }
+    
+    // Run cleanup when the module loads
+    cleanupOldData();
+    
+    // Quick feature detection for localStorage
+    try {
+        const testKey = STORAGE_PREFIX + 'test';
+        localStorage.setItem(testKey, 'test');
+        localStorage.removeItem(testKey);
+        console.log("QuickStudyMemory: localStorage is available and working");
+    } catch (e) {
+        console.error("QuickStudyMemory: localStorage is not available, progress saving will not work", e);
     }
 })();

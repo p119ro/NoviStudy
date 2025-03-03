@@ -199,6 +199,29 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize presets
     fetchPresetFiles();
     
+    // Function to generate consistent preset IDs
+    function generatePresetId(filename) {
+        if (!filename) return '';
+        
+        // Strip the path and extension
+        let id = filename;
+        
+        // Remove path if present
+        if (id.includes('/')) {
+            id = id.split('/').pop();
+        }
+        
+        // Remove extension if present
+        if (id.includes('.')) {
+            id = id.split('.').slice(0, -1).join('.');
+        }
+        
+        // Make it lowercase and replace non-alphanumeric chars with underscores
+        id = id.toLowerCase().replace(/[^a-z0-9]/gi, '_');
+        
+        return id;
+    }
+
     // Function to parse markdown in text
     function parseMarkdown(text) {
         if (!text) return text;
@@ -493,7 +516,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Extract just the filename without path and extension
             const displayName = preset.name || preset.filename.split('/').pop().replace('.csv', '');
-            const presetId = preset.filename.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+            
+            // Use consistent ID generation
+            const presetId = generatePresetId(preset.filename);
             
             const presetName = document.createElement('h3');
             presetName.textContent = displayName;
@@ -574,7 +599,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 initializeCategories();
                 
                 // Generate a consistent ID for this preset
-                const presetId = filename.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                const presetId = generatePresetId(filename);
                 
                 // Try to load saved progress if requested
                 if (continueProgress && window.QuickStudyMemory && typeof window.QuickStudyMemory.loadProgress === 'function') {
@@ -895,65 +920,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
-    }
-    
-    // Function to filter questions based on difficulty weights
-    function filterQuestionsByDifficulty(questions) {
-        // Create a copy of questions to avoid modifying the original
-        const allQuestions = [...questions];
-        
-        // Group questions by difficulty
-        const easyQuestions = allQuestions.filter(q => q.difficulty === 'easy');
-        const mediumQuestions = allQuestions.filter(q => q.difficulty === 'medium');
-        const hardQuestions = allQuestions.filter(q => q.difficulty === 'hard');
-        
-        // Calculate how many questions to take from each difficulty
-        const totalQuestions = allQuestions.length;
-        const easyCount = Math.round(totalQuestions * 0.5); // 50%
-        const mediumCount = Math.round(totalQuestions * 0.3); // 30%
-        const hardCount = Math.round(totalQuestions * 0.2); // 20%
-        
-        // Function to get random questions from an array
-        function getRandomQuestions(array, count) {
-            const shuffled = [...array].sort(() => 0.5 - Math.random());
-            return shuffled.slice(0, Math.min(count, array.length));
-        }
-        
-        // If we don't have enough questions in a category, adjust the counts
-        const actualEasyCount = Math.min(easyCount, easyQuestions.length);
-        const actualMediumCount = Math.min(mediumCount, mediumQuestions.length);
-        const actualHardCount = Math.min(hardCount, hardQuestions.length);
-        
-        // Calculate how many more questions we need to reach the total
-        const selectedCount = actualEasyCount + actualMediumCount + actualHardCount;
-        const remainingCount = totalQuestions - selectedCount;
-        
-        // Select questions based on difficulty
-        let selectedQuestions = [
-            ...getRandomQuestions(easyQuestions, actualEasyCount),
-            ...getRandomQuestions(mediumQuestions, actualMediumCount),
-            ...getRandomQuestions(hardQuestions, actualHardCount)
-        ];
-        
-        // If we don't have enough questions from the specified difficulties,
-        // add more from the available questions
-        if (remainingCount > 0 && allQuestions.length > selectedCount) {
-            // Filter out questions that are already selected
-            const remainingQuestions = allQuestions.filter(q => 
-                !selectedQuestions.some(sq => 
-                    sq.question === q.question && sq.answer === q.answer
-                )
-            );
-            
-            // Add more questions randomly
-            selectedQuestions = [
-                ...selectedQuestions,
-                ...getRandomQuestions(remainingQuestions, remainingCount)
-            ];
-        }
-        
-        // Shuffle the selected questions
-        return selectedQuestions.sort(() => 0.5 - Math.random());
     }
     
     // Function to start the study session
@@ -1290,7 +1256,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Function to save current progress to cookies
+    // Function to save current progress to localStorage
     function saveCurrentProgress() {
         // Check if we have a preset ID and the memory API is available
         if (state.currentPresetId && window.QuickStudyMemory && typeof window.QuickStudyMemory.saveProgress === 'function') {
