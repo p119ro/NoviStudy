@@ -458,7 +458,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // For now, manually add Chemistry which we know exists
             presetFiles.push({
                 name: 'AP Chemistry Unit 16',
-                filename: 'presets/chemistryunit6.csv',
+                filename: 'presets/apchemistryunit16.csv',
                 description: 'Brønsted-Lowry and Lewis acid-base concepts'
             });
 
