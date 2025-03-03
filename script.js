@@ -955,9 +955,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     masteryScore: 0
                 };
             });
-            
-            // Filter questions based on difficulty
-            state.questions = filterQuestionsByDifficulty(state.questions);
         }
         
         // Initialize category mastery overview
