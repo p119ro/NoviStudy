@@ -4,45 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>QuickStudy - Master Your Tests</title>
-    
-    <!-- Base QuickStudy styles -->
     <link rel="stylesheet" href="styles.css">
-    
-    <!-- Authentication CSS -->
-    <link rel="stylesheet" href="auth.css">
-    
-    <!-- Firebase scripts (using compat version for easier integration) -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics-compat.js"></script>
-    
     <!-- KaTeX for more efficient math rendering -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
-    
     <!-- MathJax for better math rendering -->
     <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
-    
     <!-- Load answer-comparison.js first to ensure QuickStudyAI is available -->
     <script src="answer-comparison.js"></script>
-    
-    <!-- Authentication JS (load before main script) -->
-    <script src="auth.js"></script>
-    
     <!-- Then load the main script -->
     <script src="script.js"></script>
-    
-    <!-- Authentication integration script (load last) -->
-    <script src="auth-integration.js"></script>
 </head>
 <body>
     <div class="app-container">
         <header>
             <h1>QuickStudy</h1>
             <p class="tagline">Study smarter, not harder</p>
-            <!-- Auth buttons will be added here by auth-integration.js -->
         </header>
         
         <main>
@@ -50,27 +28,6 @@
             <div id="welcome-screen" class="screen active">
                 <h2>Welcome to QuickStudy</h2>
                 <p>Master your tests with confidence</p>
-                
-                <!-- User progress section (shows only when logged in) -->
-                <div id="user-progress" class="user-progress hidden">
-                    <h3>Your Learning Progress</h3>
-                    <div class="progress-summary">
-                        <div class="progress-stat">
-                            <span class="stat-value" id="mastered-categories">0</span>
-                            <span class="stat-label">Categories Mastered</span>
-                        </div>
-                        <div class="progress-stat">
-                            <span class="stat-value" id="total-questions">0</span>
-                            <span class="stat-label">Questions Answered</span>
-                        </div>
-                        <div class="progress-stat">
-                            <span class="stat-value" id="accuracy-rate">0%</span>
-                            <span class="stat-label">Accuracy Rate</span>
-                        </div>
-                    </div>
-                    <button id="continue-learning" class="btn btn-primary">Continue Learning</button>
-                </div>
-                
                 <div class="file-upload">
                     <p>Upload your question set CSV or use a preset:</p>
                     
@@ -241,9 +198,6 @@
                 <div class="mastery-feedback" id="final-mastery-feedback"></div>
                 
                 <button id="restart-btn">Study Again</button>
-                
-                <!-- Save progress button (shown only when logged in) -->
-                <button id="save-progress-btn" class="hidden">Save My Progress</button>
             </div>
         </main>
         
@@ -299,14 +253,6 @@
                     <div class="setting-description">
                         Number of consecutive correct answers needed to achieve mastery.
                     </div>
-                </div>
-            </div>
-            
-            <!-- Account settings section (visible when signed in) -->
-            <div class="settings-group" id="account-settings" style="display:none;">
-                <h3>Account</h3>
-                <div class="settings-option">
-                    <button id="logout-settings-btn" class="btn btn-secondary">Sign Out</button>
                 </div>
             </div>
         </div>
