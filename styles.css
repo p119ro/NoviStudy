@@ -1935,3 +1935,97 @@ button:disabled {
 .dark-mode .formatted-answer .md-italic {
     color: inherit;
 }
+
+/* Add these styles to your styles.css file for the memory feature */
+
+/* Preset item layout improvements */
+.preset-item {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Buttons container for presets */
+.preset-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    margin-top: auto;
+}
+
+/* Continue button styling */
+.preset-continue-btn {
+    flex: 1;
+    background-color: var(--success-color);
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: var(--transition);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.preset-continue-btn:hover {
+    background-color: var(--mastery-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.dark-mode .preset-continue-btn {
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+.dark-mode .preset-continue-btn:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* Select/Start New button styling */
+.preset-select-btn {
+    flex: 1;
+    align-self: auto;
+    padding: 10px 15px;
+    font-size: 0.9rem;
+}
+
+/* Progress indicator badge for presets with saved progress */
+.progress-badge {
+    background-color: var(--success-color);
+    color: white;
+    font-size: 0.7rem;
+    padding: 3px 8px;
+    border-radius: 10px;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+}
+
+/* Progress bar in preset items */
+.preset-progress-bar {
+    height: 4px;
+    background-color: #ecf0f1;
+    border-radius: 2px;
+    overflow: hidden;
+    margin: 8px 0;
+}
+
+.dark-mode .preset-progress-bar {
+    background-color: #455a64;
+}
+
+.preset-progress-fill {
+    height: 100%;
+    background-color: var(--success-color);
+    transition: width 0.3s ease;
+}
+
+/* Responsive adjustments */
+@media (max-width: 500px) {
+    .preset-buttons {
+        flex-direction: column;
+    }
+    
+    .preset-continue-btn, .preset-select-btn {
+        width: 100%;
+    }
+}

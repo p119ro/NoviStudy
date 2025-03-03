@@ -63,7 +63,9 @@ document.addEventListener('DOMContentLoaded', function() {
         useAdaptiveMastery: true,
         requiredCorrectAnswers: 10,
         // Answer processing state
-        isProcessingAnswer: false
+        isProcessingAnswer: false,
+        // After other state properties
+        currentPresetId: null, // Used to track which preset is currently loaded
     };
 
     // DOM elements
@@ -491,6 +493,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Extract just the filename without path and extension
             const displayName = preset.name || preset.filename.split('/').pop().replace('.csv', '');
+            const presetId = preset.filename.replace(/[^a-z0-9]/gi, '_').toLowerCase();
             
             const presetName = document.createElement('h3');
             presetName.textContent = displayName;
@@ -498,19 +501,39 @@ document.addEventListener('DOMContentLoaded', function() {
             const presetDescription = document.createElement('p');
             presetDescription.textContent = preset.description || `Load questions from ${displayName}`;
             
-            const selectButton = document.createElement('button');
-            selectButton.textContent = 'Select';
-            selectButton.className = 'preset-select-btn';
-            selectButton.addEventListener('click', () => loadPresetFile(preset.filename));
+            // Check if there's saved progress for this preset
+            let hasSavedProgress = false;
+            if (window.QuickStudyMemory && typeof window.QuickStudyMemory.hasSavedProgress === 'function') {
+                hasSavedProgress = window.QuickStudyMemory.hasSavedProgress(presetId);
+            }
+            
+            // Create buttons container
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'preset-buttons';
+            
+            // Add "Continue" button if there's saved progress
+            if (hasSavedProgress) {
+                const continueButton = document.createElement('button');
+                continueButton.textContent = 'Continue';
+                continueButton.className = 'preset-continue-btn';
+                continueButton.addEventListener('click', () => loadPresetFile(preset.filename, true));
+                buttonContainer.appendChild(continueButton);
+            }
+            
+            // Add "Start New" button
+            const startButton = document.createElement('button');
+            startButton.textContent = hasSavedProgress ? 'Start New' : 'Select';
+            startButton.className = 'preset-select-btn';
+            startButton.addEventListener('click', () => loadPresetFile(preset.filename, false));
+            buttonContainer.appendChild(startButton);
             
             presetElement.appendChild(presetName);
             presetElement.appendChild(presetDescription);
-            presetElement.appendChild(selectButton);
+            presetElement.appendChild(buttonContainer);
             
             elements.presetsContainer.appendChild(presetElement);
         });
     }
-
     // Function to show presets screen
     function showPresetsScreen() {
         showScreen('presets');
@@ -518,8 +541,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Function to load a preset file
-    async function loadPresetFile(filename) {
-        console.log(`Loading preset file: ${filename}`);
+    async function loadPresetFile(filename, continueProgress = false) {
+        console.log(`Loading preset file: ${filename}, continue progress: ${continueProgress}`);
         
         // Show loading state
         elements.presetsContainer.innerHTML = '<div class="preset-loading">Loading questions from preset...</div>';
@@ -547,8 +570,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 state.categories = {};
                 state.categoryPerformance = {};
                 
-                // Initialize categories and start
+                // Initialize categories
                 initializeCategories();
+                
+                // Generate a consistent ID for this preset
+                const presetId = filename.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+                
+                // Try to load saved progress if requested
+                if (continueProgress && window.QuickStudyMemory && typeof window.QuickStudyMemory.loadProgress === 'function') {
+                    const savedProgress = window.QuickStudyMemory.loadProgress(presetId);
+                    
+                    if (savedProgress) {
+                        // Restore progress from saved data
+                        restoreProgress(savedProgress);
+                        console.log("Resumed from saved progress:", savedProgress);
+                    } else {
+                        console.log("No saved progress found, starting new session");
+                    }
+                } else if (window.QuickStudyMemory && typeof window.QuickStudyMemory.clearProgress === 'function') {
+                    // If starting new, clear any existing progress
+                    window.QuickStudyMemory.clearProgress(presetId);
+                }
+                
+                // Store the preset ID for later use
+                state.currentPresetId = presetId;
+                
                 startStudySession();
             } catch (error) {
                 console.error("Error parsing preset:", error);
@@ -804,6 +850,52 @@ document.addEventListener('DOMContentLoaded', function() {
             };
         });
     }
+
+    // Function to restore progress from saved data
+    function restoreProgress(savedProgress) {
+        if (!savedProgress) return;
+        
+        // Restore basic stats
+        state.currentQuestionIndex = savedProgress.currentQuestionIndex || 0;
+        state.correctAnswers = savedProgress.correctAnswers || 0;
+        state.incorrectAnswers = savedProgress.incorrectAnswers || 0;
+        state.totalTime = savedProgress.totalTime || 0;
+        state.questionTimes = savedProgress.questionTimes || [];
+        
+        // Restore category stats
+        if (savedProgress.categories) {
+            Object.keys(savedProgress.categories).forEach(category => {
+                if (state.categories[category]) {
+                    state.categories[category].correct = savedProgress.categories[category].correct || 0;
+                    state.categories[category].incorrect = savedProgress.categories[category].incorrect || 0;
+                    state.categories[category].times = savedProgress.categories[category].times || [];
+                    state.categories[category].totalTime = savedProgress.categories[category].totalTime || 0;
+                    state.categories[category].mastery = savedProgress.categories[category].mastery || 0;
+                    state.categories[category].isMastered = savedProgress.categories[category].isMastered || false;
+                }
+            });
+        }
+        
+        // Restore category performance data
+        if (savedProgress.categoryPerformance) {
+            Object.keys(savedProgress.categoryPerformance).forEach(category => {
+                if (state.categoryPerformance[category]) {
+                    state.categoryPerformance[category].consecutiveCorrect = 
+                        savedProgress.categoryPerformance[category].consecutiveCorrect || 0;
+                    state.categoryPerformance[category].timeWithinLimit = 
+                        savedProgress.categoryPerformance[category].timeWithinLimit || 0;
+                    state.categoryPerformance[category].totalAttempts = 
+                        savedProgress.categoryPerformance[category].totalAttempts || 0;
+                    state.categoryPerformance[category].recentResults = 
+                        savedProgress.categoryPerformance[category].recentResults || [];
+                    state.categoryPerformance[category].recentTimeResults = 
+                        savedProgress.categoryPerformance[category].recentTimeResults || [];
+                    state.categoryPerformance[category].masteryScore = 
+                        savedProgress.categoryPerformance[category].masteryScore || 0;
+                }
+            });
+        }
+    }
     
     // Function to filter questions based on difficulty weights
     function filterQuestionsByDifficulty(questions) {
@@ -868,37 +960,39 @@ document.addEventListener('DOMContentLoaded', function() {
     function startStudySession() {
         console.log("Starting study session with questions:", state.questions);
         
-        // Reset state
-        state.currentQuestionIndex = 0;
-        state.correctAnswers = 0;
-        state.incorrectAnswers = 0;
-        state.totalTime = 0;
-        state.questionTimes = [];
-        state.mastery = 0;
-        state.selectedMCQOption = null;
-        
-        // Reset category stats
-        Object.keys(state.categories).forEach(category => {
-            state.categories[category].correct = 0;
-            state.categories[category].incorrect = 0;
-            state.categories[category].times = [];
-            state.categories[category].totalTime = 0;
-            state.categories[category].mastery = 0;
-            state.categories[category].isMastered = false;
+        // If we're not continuing from saved progress (currentQuestionIndex is 0), reset state
+        if (state.currentQuestionIndex === 0) {
+            // Reset state
+            state.correctAnswers = 0;
+            state.incorrectAnswers = 0;
+            state.totalTime = 0;
+            state.questionTimes = [];
+            state.mastery = 0;
+            state.selectedMCQOption = null;
             
-            // Reset category performance tracking
-            state.categoryPerformance[category] = {
-                consecutiveCorrect: 0,
-                timeWithinLimit: 0,
-                totalAttempts: 0,
-                recentResults: [],
-                recentTimeResults: [],
-                masteryScore: 0
-            };
-        });
-        
-        // Filter questions based on difficulty
-        state.questions = filterQuestionsByDifficulty(state.questions);
+            // Reset category stats
+            Object.keys(state.categories).forEach(category => {
+                state.categories[category].correct = 0;
+                state.categories[category].incorrect = 0;
+                state.categories[category].times = [];
+                state.categories[category].totalTime = 0;
+                state.categories[category].mastery = 0;
+                state.categories[category].isMastered = false;
+                
+                // Reset category performance tracking
+                state.categoryPerformance[category] = {
+                    consecutiveCorrect: 0,
+                    timeWithinLimit: 0,
+                    totalAttempts: 0,
+                    recentResults: [],
+                    recentTimeResults: [],
+                    masteryScore: 0
+                };
+            });
+            
+            // Filter questions based on difficulty
+            state.questions = filterQuestionsByDifficulty(state.questions);
+        }
         
         // Initialize category mastery overview
         updateCategoryMasteryOverview();
@@ -1194,6 +1288,14 @@ document.addEventListener('DOMContentLoaded', function() {
             
             elements.categoryMasteryOverview.appendChild(categoryItem);
         });
+    }
+
+    // Function to save current progress to cookies
+    function saveCurrentProgress() {
+        // Check if we have a preset ID and the memory API is available
+        if (state.currentPresetId && window.QuickStudyMemory && typeof window.QuickStudyMemory.saveProgress === 'function') {
+            window.QuickStudyMemory.saveProgress(state, state.currentPresetId);
+        }
     }
 
     // Function to start the timer
@@ -1625,6 +1727,8 @@ Make sure to review this topic in your notes or textbook.</div>
         
         // Show feedback screen
         showScreen('feedback');
+        // At the end of processAnswerResult(), add this line:
+        saveCurrentProgress();
     }
     
     // Function to update category performance data
@@ -1797,6 +1901,9 @@ Make sure to review this topic in your notes or textbook.</div>
     function showNextQuestion() {
         state.currentQuestionIndex++;
         console.log("Moving to next question:", state.currentQuestionIndex);
+        
+        // Save progress
+        saveCurrentProgress();
         
         if (state.currentQuestionIndex < state.questions.length) {
             showScreen('study');
