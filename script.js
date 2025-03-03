@@ -480,6 +480,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 filename: 'presets/apphysicsunit4.csv',
                 description: 'Physics test prep'
             });
+
+            
+            presetFiles.push({
+                name: 'AP Macro Unit 3 Test',
+                filename: 'presets/apmacrounit3.csv',
+                description: 'MPC and MPS'
+            });
             
             // Store presets in state
             state.availablePresets = presetFiles;
