@@ -1,0 +1,39 @@
+question,answer,category,difficulty,estimated_time_to_solve,type
+"State the order and degree of the differential equation: dy/dx + x²y = sin x.","Order: 1, Degree: 1",Mathematics (Differential Equations),Easy,2 minutes,FRQ
+"State the order and degree of the differential equation: d²y/dx² - dy/dx + 3y = xe^x.","Order: 2, Degree: 1",Mathematics (Differential Equations),Easy,2 minutes,FRQ
+"State the order and degree of the differential equation: d³y/dx³ + 4x d²y/dx² + sin²x dy/dx + 3y = sin x.","Order: 3, Degree: 1",Mathematics (Differential Equations),Easy,2 minutes,FRQ
+"State the order and degree of the differential equation: (dr/ds)³ - r = 1.","Order: 1, Degree: 3",Mathematics (Differential Equations),Easy,2 minutes,FRQ
+"Verify that y = e^x is a solution of the differential equation d²y/dx² - y = 0.","Verified",Mathematics (Differential Equations),Easy,3 minutes,FRQ
+"Verify that y = ln(x)/x² is a solution of the differential equation d²y/dx² + (5/x) dy/dx + (4/x²)y = 0.","Verified",Mathematics (Differential Equations),Medium,5 minutes,FRQ
+"Verify that y = e^(-3x) is a solution of the differential equation d²y/dx² + 2 dy/dx - 3y = 0.","Verified",Mathematics (Differential Equations),Easy,3 minutes,FRQ
+"Verify that y = x² + 3x is a solution of the differential equation x dy/dx - y = x².","Verified",Mathematics (Differential Equations),Easy,3 minutes,FRQ
+"Find the general solution of dy/dx = 3x(4 + e^x) and the particular solution for y(0) = 6.","General: y = 6x² + 3xe^x - 3e^x + C; Particular: y = 6x² + 3xe^x - 3e^x + 9",Mathematics (Differential Equations),Medium,10 minutes,FRQ
+"Find the general solution of dy/dx = (3x³ - 4)/x and the particular solution for y(e) = 2.","General: y = x³ - 4ln|x| + C; Particular: y = x³ - 4ln|x| + 6 - e³",Mathematics (Differential Equations),Medium,10 minutes,FRQ
+"Find the general solution of dy/dx = (y - 1)/(x + 3) and the particular solution for y(-1) = 0.","General: y = 1 + C(x + 3); Particular: y = 1 - 0.5(x + 3)",Mathematics (Differential Equations),Medium,10 minutes,FRQ
+"Find the general solution of dy/dx = cos x - 2 cos x sin x and the particular solution for y(π/6) = -3.","General: y = sinx - sin²x + C; Particular: y = sinx - sin²x - 3.25",Mathematics (Differential Equations),Medium,10 minutes,FRQ
+"Find the general solution of (1 - y) dy/dx = y² sin x and the particular solution for y(π) = 1.","General: -1/y - ln|y| = -cosx + C; Particular: -1/y - ln|y| = -cosx - 2",Mathematics (Differential Equations),Hard,15 minutes,FRQ
+"Find the general solution of dy/dx = (3x² + 1) cos² y and the particular solution for y(-2) = π/4.","General: tan y = x³ + x + C; Particular: tan y = x³ + x + 11",Mathematics (Differential Equations),Hard,15 minutes,FRQ
+"Find the general solution of dy/dx = (2x + 1)/(3x² + 3x + 1) and the particular solution for y(-1) = 2.","General: y = (1/3)ln|3x² + 3x + 1| + C; Particular: y = (1/3)ln|3x² + 3x + 1| + 2",Mathematics (Differential Equations),Medium,10 minutes,FRQ
+"Find the general solution of (x² - 3) dy/dx = -x/y and the particular solution for y(2) = -3.","General: y² = -ln|x² - 3| + C; Particular: y² = -ln|x² - 3| + 9",Mathematics (Differential Equations),Medium,10 minutes,FRQ
+"Draw a slope field for dy/dx = x² + y² and graph the particular solution with y(0) = 1.","Slope field and graph description provided",Mathematics (Differential Equations),Hard,20 minutes,FRQ
+"For the logistic function P(t) = 100/(1 + 24e^(-0.1t)), find (a) carrying capacity, (b) max growth rate, (c) initial population, (d) population when increasing most rapidly.","(a) 100, (b) 0.1, (c) 4, (d) 50",Mathematics (Differential Equations),Medium,15 minutes,FRQ
+"For the logistic differential equation dP/dt = 0.00003P(2000 - P), find (a) carrying capacity, (b) max growth rate, (c) population when increasing most rapidly.","(a) 2000, (b) 0.06, (c) 1000",Mathematics (Differential Equations),Medium,15 minutes,FRQ
+"Rumor spread: If 10 employees start a rumor and it spreads to 100 after 1 hour, how long until 25% hear it?","Approximately 2.32 hours",Mathematics (Differential Equations),Hard,20 minutes,FRQ
+"Use Euler’s method with h = 0.1 to approximate y(1.3) for dy/dx = y + xy² with y(1) = 2.","Approximate y(1.3) ≈ 5.23",Mathematics (Differential Equations),Hard,20 minutes,FRQ
+"Model population growth in China: (a) Write the differential equation, (b) Find the general solution, (c) Find the particular solution for 2022 population, (d) Project when population reaches 2 billion.","(a) dP/dt = 0.003P, (b) P = Ce^(0.003t), (c) P = 1.449e9 e^(0.003t), (d) ≈ 231 years",Mathematics (Differential Equations),Hard,25 minutes,FRQ
+"Model radioactive decay of radium: (a) Write the differential equation, (b) Find the general solution, (c) Find the particular solution for A(0) = 10g, (d) Find A(300).","(a) dA/dt = -kA, (b) A = Ce^(-kt), (c) A = 10e^(-kt), (d) ≈ 2.87g",Mathematics (Differential Equations),Hard,25 minutes,FRQ
+"Solve cos y dy/dx = sin y / x with y(-1) = π/3.","sin y = -√3/2 x",Mathematics (Differential Equations),Medium,10 minutes,FRQ
+"Solve dy/dx = 3xy with y(0) = 4.","y = 4e^(1.5x²)",Mathematics (Differential Equations),Medium,10 minutes,FRQ
+"If dy/dx = 2(1 + y²)x, then which of the following is true?","B",Mathematics (Differential Equations),Medium,5 minutes,MCQ
+"If the slope of the tangent line at (0, π/6) is dy/dx = (2x + 4)/cos y, then the function is:","B",Mathematics (Differential Equations),Medium,5 minutes,MCQ
+"A tumor grows at a rate proportional to its mass. Which differential equation describes this?","B",Mathematics (Differential Equations),Easy,3 minutes,MCQ
+"Approximate y(0.6) using Euler’s method with h = 0.2 for dy/dx = 2x - y, y(0) = 0.","B",Mathematics (Differential Equations),Medium,10 minutes,MCQ
+"If f(x) = 1/(1-x) - x^2, find f'(x)? Options:  
+(A) 1/(1-x)^2 - 2x  
+(B) 1/(1-x)^2 + 2x","(A) 1/(1-x)^2 - 2x","AP Calculus: Derivatives (Chs.1-7)","Easy","2 minutes","mcq"
+"If a ball is dropped from 100 ft above the ground, with d(t)=16t^2, the average velocity on [1,4] is 80 ft/s, and the instantaneous velocity at t=3 is 96 ft/s. Explain the difference.","Average velocity = [d(4) - d(1)] / (4 - 1) = 80 ft/s. Instantaneous velocity = d'(3) = 32*3 = 96 ft/s. The average velocity is the slope of the secant line over [1,4], while the instantaneous velocity is the slope of the tangent line at t=3.","AP Calculus: Kinematics (Chs.1-7)","Medium","4 minutes","frq"
+"Suppose g is the derivative of f on [-1,4]. Which of the following statements are true?  
+(I) f has a local minimum at x=2  
+(II) f is concave down on (0,2)  
+(III) ...","I and II only (based on typical sign-change/concavity arguments)","AP Calculus: Graphical Analysis of Derivatives (Chs.1-7)","Medium","5 minutes","frq"
+"A train travels at 30 mph using 50 gallons of fuel. If its speed increases to 60 mph, how many gallons of fuel are needed? (Assume the question involves a known fuel-consumption model.)","Solution depends on the specific model, but typically more than 50 gallons due to increased rate of fuel consumption at higher speeds. (Exact answer not visible in photo.)","AP Calculus: Applications/Related Rates (Chs.1-7)","Medium","5 minutes","frq"

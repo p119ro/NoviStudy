@@ -517,6 +517,12 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             presetFiles.push({
+                name: 'AP Calculus Unit 7 Test',
+                filename: 'presets/apcalcunit7.csv',
+                description: 'Word problems'
+            });
+
+            presetFiles.push({
                 name: 'AP Calculus Unit 6 Test',
                 filename: 'presets/apcalcunit6.csv',
                 description: 'Calc test prep'
