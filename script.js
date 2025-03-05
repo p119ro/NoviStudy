@@ -1521,7 +1521,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Function to show explanation
     function showExplanation() {
-        // Show the explanation container
+        // Original code that shows the explanation container
         elements.explanationContainer.classList.remove('hidden');
         
         // Show loading state
@@ -1568,10 +1568,57 @@ document.addEventListener('DOMContentLoaded', function() {
                     } else if (window.MathJax) {
                         window.MathJax.typeset([elements.explanationContent]);
                     }
+                    
+                    // Add the chat UI after the explanation is displayed
+                    // Check if chat UI already exists and remove it if it does
+                    const existingChat = elements.explanationContent.querySelector('.explanation-chat-container');
+                    if (existingChat) {
+                        existingChat.remove();
+                    }
+                    
+                    // Create the chat UI
+                    if (window.QuickStudyAI && typeof window.QuickStudyAI.createChatUI === 'function') {
+                        // Make formatMarkdown function available to QuickStudyAI
+                        window.formatMarkdown = formatMarkdown;
+                        
+                        // Create the chat UI
+                        const chatUI = window.QuickStudyAI.createChatUI(
+                            elements.explanationContent, 
+                            function(question, responseCallback) {
+                                // Handle the question by passing it to the AI
+                                if (window.QuickStudyAI && typeof window.QuickStudyAI.handleFollowUpQuestion === 'function') {
+                                    window.QuickStudyAI.handleFollowUpQuestion(question, function(response) {
+                                        // Pass the response back to the chat UI
+                                        responseCallback(response);
+                                        
+                                        // Render math in the response (if needed)
+                                        setTimeout(function() {
+                                            const aiMessages = elements.explanationContent.querySelectorAll('.ai-message');
+                                            const lastMessage = aiMessages[aiMessages.length - 1];
+                                            
+                                            if (window.katex && window.renderMathInElement && lastMessage) {
+                                                renderMathInElement(lastMessage, {
+                                                    delimiters: [
+                                                        {left: "\\(", right: "\\)", display: false},
+                                                        {left: "\\[", right: "\\]", display: true},
+                                                        {left: "$", right: "$", display: false}
+                                                    ]
+                                                });
+                                            } else if (window.MathJax && lastMessage) {
+                                                window.MathJax.typeset([lastMessage]);
+                                            }
+                                        }, 100);
+                                    });
+                                } else {
+                                    responseCallback("I'm sorry, the follow-up question feature isn't available right now. Please try refreshing the page.");
+                                }
+                            }
+                        );
+                    }
                 }
             );
         } else {
-            // Fallback if Gemini API is not available
+            // Fallback if Gemini API is not available (original fallback code)
             const explanation = getDefaultExplanation(
                 currentExplanationState.userAnswer,
                 currentExplanationState.correctAnswer,
