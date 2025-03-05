@@ -510,6 +510,13 @@ document.addEventListener('DOMContentLoaded', function() {
             // Example: { name: 'Chemistry', filename: 'presets/chemistry.csv' }
             
             // For now, manually add Chemistry which we know exists
+
+            presetFiles.push({
+                name: 'AP Chemistry Quiz',
+                filename: 'presets/chemistryquiz.csv',
+                description: 'Finding pH for the quiz on Thursday'
+            });
+
             presetFiles.push({
                 name: 'AP Chemistry Unit 16',
                 filename: 'presets/apchemistryunit16.csv',
