@@ -631,6 +631,20 @@ Make sure to review this topic in your notes or textbook.
             }
         });
         
+        // Add auto-resize functionality for textarea
+        chatInput.addEventListener('input', function() {
+            // Reset height first to get accurate scrollHeight
+            this.style.height = 'auto';
+            // Set height based on content (add a small buffer to avoid scrollbar flickering)
+            this.style.height = (this.scrollHeight + 2) + 'px';
+        });
+        
+        // Initial resize on creation
+        setTimeout(function() {
+            chatInput.style.height = 'auto';
+            chatInput.style.height = (chatInput.scrollHeight + 2) + 'px';
+        }, 0);
+        
         // Submit question function
         function submitQuestion() {
             const question = chatInput.value.trim();
@@ -798,6 +812,14 @@ Make sure to review this topic in your notes or textbook.
                 min-height: 45px;
                 max-height: 150px;
                 transition: all 0.3s ease;
+                overflow-y: auto;
+                word-wrap: break-word;
+                white-space: pre-wrap;
+                line-height: 1.5;
+                display: block;
+                overflow-x: hidden;
+                box-sizing: border-box;
+                width: 100%;
             }
             
             .dark-mode .explanation-chat-input {

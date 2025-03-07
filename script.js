@@ -320,7 +320,7 @@ document.addEventListener('DOMContentLoaded', function() {
         mathPreview.className = 'math-preview';
         mathPreview.id = 'math-preview';
         
-        // Use textarea instead of input for larger input area
+        // Use textarea for larger input area and better handling of newlines
         const mathInput = document.createElement('textarea');
         mathInput.className = 'math-input';
         mathInput.id = 'answer-input';
@@ -329,7 +329,11 @@ document.addEventListener('DOMContentLoaded', function() {
         mathInput.spellcheck = false;   // Disable spellcheck
         
         // Add event listeners
-        mathInput.addEventListener('input', updateMathPreview);
+        mathInput.addEventListener('input', function() {
+            updateMathPreview();
+            autoResizeTextarea(this);
+        });
+        
         mathInput.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && e.ctrlKey) {
                 // Ctrl+Enter to submit
@@ -349,6 +353,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Update preview
                 updateMathPreview();
+                autoResizeTextarea(this);
             }
         });
         
@@ -383,6 +388,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log("Math input system set up");
     }
+    
+    
 
     // Function to update math preview with Desmos-like formatting
     function updateMathPreview() {
@@ -404,10 +411,38 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Set the preview content
         preview.innerHTML = formattedInput;
+        
+        // Ensure the preview matches the textarea height
+        autoResizeTextarea(elements.answerInput);
+    }
+    
+    
+    
+    
+
+    function autoResizeTextarea(textarea) {
+        if (!textarea) return;
+        
+        // Reset height to auto to get the correct scrollHeight
+        textarea.style.height = 'auto';
+        
+        // Calculate the new height (with a minimum of 120px)
+        const newHeight = Math.max(120, textarea.scrollHeight);
+        
+        // Apply the new height
+        textarea.style.height = newHeight + 'px';
+        
+        // Also update the container and preview height
+        if (elements.mathPreview && elements.mathInputContainer) {
+            elements.mathPreview.style.minHeight = newHeight + 'px';
+        }
     }
 
     // Process math input to create Desmos-like formatting
     function processMathInput(input) {
+        // Handle empty input
+        if (!input) return '';
+        
         // Split input by lines and process each line
         const lines = input.split('\n');
         const processedLines = lines.map(line => {
@@ -446,7 +481,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // Join lines back with line breaks for HTML
         return processedLines.join('<br>');
     }
-
     // Function to format markdown in explanations
     function formatMarkdown(text) {
         if (!text) return '';
@@ -1612,6 +1646,15 @@ document.addEventListener('DOMContentLoaded', function() {
                                 } else {
                                     responseCallback("I'm sorry, the follow-up question feature isn't available right now. Please try refreshing the page.");
                                 }
+                                
+                                // After sending a question, make sure the textarea auto-resizes back to appropriate size
+                                setTimeout(function() {
+                                    const chatTextarea = document.querySelector('.explanation-chat-input');
+                                    if (chatTextarea) {
+                                        chatTextarea.style.height = 'auto';
+                                        chatTextarea.style.height = (chatTextarea.scrollHeight + 2) + 'px';
+                                    }
+                                }, 50);
                             }
                         );
                     }

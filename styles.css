@@ -523,67 +523,78 @@ button:hover {
 /* UPDATED: Math Input Container and Preview */
 .math-input-container {
     position: relative;
-    margin-bottom: 20px; /* Increased margin for larger input */
+    margin-bottom: 20px;
+    border: 2px solid #e0e0e0;
+    border-radius: 5px;
+    transition: all 0.3s ease;
+    background-color: white;
+}
+
+.dark-mode .math-input-container {
+    background-color: #2c3e50;
+    border-color: #546e7a;
+}
+
+.math-input-container.focused {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+.dark-mode .math-input-container.focused {
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.4);
 }
 
 .math-preview {
-    position: absolute;
-    top: 16px; /* Adjusted for larger input */
-    left: 15px;
-    right: 15px;
-    pointer-events: none;
-    z-index: 2;
+    padding: 16px 15px;
+    min-height: 120px;
     font-size: 1.1rem;
     line-height: 1.5;
-    overflow: hidden;
-    color: #333; /* Black text instead of blue */
-    white-space: pre;
-    min-height: 24px; /* Minimum height for preview */
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    color: #333;
+    pointer-events: none;
 }
 
 .dark-mode .math-preview {
-    color: #fff; /* White text for dark mode */
+    color: #fff;
 }
 
 .math-input {
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 100%;
-    padding: 16px 15px; /* Increased padding for larger input */
-    border: 2px solid #e0e0e0;
-    border-radius: 5px;
+    height: 100%;
+    padding: 16px 15px;
     font-size: 1.1rem;
-    background-color: white;
-    position: relative;
-    z-index: 1;
-    transition: all 0.3s ease;
-    color: transparent; /* Make the input text transparent */
-    caret-color: #333; /* Keep the cursor visible */
-    white-space: pre;
-    min-height: 120px; /* Much taller input box */
-    resize: vertical; /* Allow user to resize vertically */
+    line-height: 1.5;
+    background-color: transparent;
+    border: none;
+    outline: none;
+    color: transparent;
+    caret-color: #333;
+    resize: none;
+    overflow: hidden;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    z-index: 2;
 }
 
 .dark-mode .math-input {
-    background-color: #2c3e50;
-    border-color: #546e7a;
-    caret-color: #fff; /* Keep the cursor visible in dark mode */
+    caret-color: #fff;
 }
 
 .math-input::placeholder {
-    color: #999; /* Keep placeholder visible */
+    color: #999;
 }
 
 .dark-mode .math-input::placeholder {
     color: #777;
 }
 
-.math-input:focus {
-    border-color: var(--primary-color);
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
-}
-
-.dark-mode .math-input:focus {
-    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.4);
+/* Display placeholder only when input is empty */
+.math-input-container.has-content .math-input::placeholder {
+    color: transparent;
 }
 
 /* Math Display Styles (Desmos-like) */
