@@ -144,9 +144,18 @@ document.addEventListener('DOMContentLoaded', function() {
     let elapsedTime = 0;
 
     // Welcome screen event listeners
-    elements.csvUpload.addEventListener('change', handleCSVUpload);
-    elements.usePresetBtn.addEventListener('click', showPresetsScreen);
-    elements.presetBackBtn.addEventListener('click', () => showScreen('welcome'));
+    elements.csvUpload && elements.csvUpload.addEventListener('change', handleCSVUpload);
+    // We'll initialize the subject view instead of using the preset button
+    // elements.usePresetBtn.addEventListener('click', showPresetsScreen);
+    elements.presetBackBtn && elements.presetBackBtn.addEventListener('click', () => {
+        // Check if we're in a category view
+        if (state.currentSubjectCategory) {
+            state.currentSubjectCategory = null;
+            displaySubjectCategories();
+        } else {
+            showScreen('welcome');
+        }
+    });
     elements.header && elements.header.addEventListener('click', navigateHome);
     
     // Format tabs
@@ -534,83 +543,349 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Function to fetch preset files from the 'presets' folder
-    async function fetchPresetFiles() {
+    function fetchPresetFiles() {
         // Show loading state
         if (elements.presetsContainer) {
             elements.presetsContainer.innerHTML = '<div class="preset-loading">Loading presets...</div>';
         }
-
+    
         try {
-            // In a real implementation, we'd use an API to get a list of files
-            // Since we can't list directory contents directly, we'll work with 
-            // the files we know about through the document upload context
-            
-            // Find all files that start with "presets/" and end with ".csv"
-            const presetFiles = [];
-            
-            // Add preset files from presets/ directory
-            // Example: { name: 'Chemistry', filename: 'presets/chemistry.csv' }
-            
-            // For now, manually add Chemistry which we know exists
-
-            presetFiles.push({
+            // Create subject categories
+            const subjectCategories = [
+                {
+                    id: 'chemistry',
+                    name: 'Chemistry',
+                    icon: '🧪',
+                    description: 'AP Chemistry study materials',
+                    presets: []
+                },
+                {
+                    id: 'calculus',
+                    name: 'Calculus',
+                    icon: '📊',
+                    description: 'AP Calculus study materials',
+                    presets: []
+                },
+                {
+                    id: 'statistics',
+                    name: 'Statistics',
+                    icon: '📈',
+                    description: 'AP Statistics study materials',
+                    presets: []
+                },
+                {
+                    id: 'physics',
+                    name: 'Physics',
+                    icon: '⚛️',
+                    description: 'AP Physics study materials',
+                    presets: []
+                },
+                {
+                    id: 'economics',
+                    name: 'Economics',
+                    icon: '💰',
+                    description: 'AP Economics study materials',
+                    presets: []
+                }
+            ];
+    
+            // Preset files - assign to appropriate categories
+            const chemistryQuiz = {
                 name: 'AP Chemistry Quiz',
                 filename: 'presets/chemistryquiz.csv',
                 description: 'Finding pH for the quiz on Thursday'
-            });
-
-            presetFiles.push({
+            };
+            
+            const chemistryUnit16 = {
                 name: 'AP Chemistry Unit 16',
                 filename: 'presets/apchemistryunit16.csv',
                 description: 'Brønsted-Lowry and Lewis acid-base concepts'
-            });
-
-            presetFiles.push({
+            };
+    
+            const calculusUnit7 = {
                 name: 'AP Calculus Unit 7 Test',
                 filename: 'presets/apcalcunit7.csv',
                 description: 'Word problems'
-            });
-
-            presetFiles.push({
+            };
+    
+            const calculusUnit6 = {
                 name: 'AP Calculus Unit 6 Test',
                 filename: 'presets/apcalcunit6.csv',
                 description: 'Calc test prep'
-            });
-
-            presetFiles.push({
+            };
+    
+            const statsUnit89 = {
                 name: 'AP Stats Unit 8 & 9 Test',
                 filename: 'presets/apstatsunit89.csv',
                 description: 'Estimating proportions with confidence & Testing claims about proportions'
-            });
-
-
-            presetFiles.push({
+            };
+    
+            const physicsUnit4 = {
                 name: 'AP Physics Unit 4 Test',
                 filename: 'presets/apphysicsunit4.csv',
                 description: 'Physics test prep'
-            });
-
-            
-            presetFiles.push({
+            };
+    
+            const macroUnit3 = {
                 name: 'AP Macro Unit 3 Test',
                 filename: 'presets/apmacrounit3.csv',
                 description: 'MPC and MPS'
-            });
+            };
+    
+            // Add presets to their respective categories
+            const chemistry = subjectCategories.find(cat => cat.id === 'chemistry');
+            if (chemistry) {
+                chemistry.presets.push(chemistryQuiz);
+                chemistry.presets.push(chemistryUnit16);
+            }
+    
+            const calculus = subjectCategories.find(cat => cat.id === 'calculus');
+            if (calculus) {
+                calculus.presets.push(calculusUnit7);
+                calculus.presets.push(calculusUnit6);
+            }
+    
+            const statistics = subjectCategories.find(cat => cat.id === 'statistics');
+            if (statistics) {
+                statistics.presets.push(statsUnit89);
+            }
+    
+            const physics = subjectCategories.find(cat => cat.id === 'physics');
+            if (physics) {
+                physics.presets.push(physicsUnit4);
+            }
+    
+            const economics = subjectCategories.find(cat => cat.id === 'economics');
+            if (economics) {
+                economics.presets.push(macroUnit3);
+            }
+    
+            // Filter out empty categories
+            const filteredCategories = subjectCategories.filter(cat => cat.presets.length > 0);
             
-            // Store presets in state
-            state.availablePresets = presetFiles;
+            // Store categories in state
+            state.subjectCategories = filteredCategories;
             
-            // If we're on the presets screen, display them
-            if (elements.screens.presets.classList.contains('active')) {
-                displayPresetFiles();
+            // Create a flat list of all presets for compatibility with existing code
+            const allPresets = [];
+            for (const category of filteredCategories) {
+                for (const preset of category.presets) {
+                    allPresets.push(preset);
+                }
+            }
+            
+            // Store presets in state for backward compatibility
+            state.availablePresets = allPresets;
+            
+            // If we're on the welcome screen, display subject categories instead of the old options
+            if (elements.screens.welcome.classList.contains('active')) {
+                displaySubjectCategories();
+            } else if (elements.screens.presets.classList.contains('active')) {
+                // Check if we're viewing a specific category
+                if (state.currentSubjectCategory) {
+                    displayPresetFilesForCategory(state.currentSubjectCategory);
+                } else {
+                    displaySubjectCategories();
+                }
             }
         } catch (error) {
-            console.error("Error fetching preset files:", error);
+            console.error("Error organizing preset files:", error);
             if (elements.presetsContainer) {
                 elements.presetsContainer.innerHTML = 
                     '<div class="preset-empty">Error loading presets: ' + error.message + '</div>';
             }
         }
+    }
+
+    function displaySubjectCategories() {
+        // Clear welcome screen content and prepare it for displaying categories
+        elements.screens.welcome.innerHTML = '';
+        
+        // Create container for subject categories
+        const categoriesContainer = document.createElement('div');
+        categoriesContainer.className = 'subject-categories-container';
+        
+        // Create header for the categories view
+        const header = document.createElement('div');
+        header.className = 'subject-categories-header';
+        
+        const title = document.createElement('h2');
+        title.textContent = 'Study Materials';
+        
+        const subtitle = document.createElement('p');
+        subtitle.textContent = 'Select a subject to browse available study materials';
+        
+        // Add upload own file option
+        const uploadContainer = document.createElement('div');
+        uploadContainer.className = 'upload-own-container';
+        
+        const uploadLabel = document.createElement('p');
+        uploadLabel.textContent = 'Or upload your own materials:';
+        
+        const uploadBtn = document.createElement('label');
+        uploadBtn.className = 'upload-btn';
+        uploadBtn.textContent = 'Upload CSV File';
+        
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.id = 'csv-upload';
+        fileInput.accept = '.csv';
+        fileInput.addEventListener('change', handleCSVUpload);
+        
+        uploadBtn.appendChild(fileInput);
+        uploadContainer.appendChild(uploadLabel);
+        uploadContainer.appendChild(uploadBtn);
+        
+        header.appendChild(title);
+        header.appendChild(subtitle);
+        
+        // Create grid for subject categories
+        const categoryGrid = document.createElement('div');
+        categoryGrid.className = 'subject-category-grid';
+        
+        // Create a card for each subject category
+        state.subjectCategories.forEach(category => {
+            const categoryCard = document.createElement('div');
+            categoryCard.className = 'subject-category-card';
+            categoryCard.dataset.categoryId = category.id;
+            
+            const categoryIcon = document.createElement('div');
+            categoryIcon.className = 'subject-category-icon';
+            categoryIcon.textContent = category.icon || '📚';
+            
+            const categoryContent = document.createElement('div');
+            categoryContent.className = 'subject-category-content';
+            
+            const categoryName = document.createElement('h3');
+            categoryName.textContent = category.name;
+            
+            const categoryDesc = document.createElement('p');
+            categoryDesc.textContent = category.description;
+            
+            const presetCount = document.createElement('div');
+            presetCount.className = 'preset-count';
+            presetCount.textContent = `${category.presets.length} ${category.presets.length === 1 ? 'material' : 'materials'}`;
+            
+            categoryContent.appendChild(categoryName);
+            categoryContent.appendChild(categoryDesc);
+            categoryContent.appendChild(presetCount);
+            
+            categoryCard.appendChild(categoryIcon);
+            categoryCard.appendChild(categoryContent);
+            
+            // Add click event to view presets in this category
+            categoryCard.addEventListener('click', () => {
+                showPresetsForCategory(category);
+            });
+            
+            categoryGrid.appendChild(categoryCard);
+        });
+        
+        // Assemble the categories view
+        categoriesContainer.appendChild(header);
+        categoriesContainer.appendChild(categoryGrid);
+        categoriesContainer.appendChild(uploadContainer);
+        
+        // Add to welcome screen
+        elements.screens.welcome.appendChild(categoriesContainer);
+        
+        // Make the welcome screen visible
+        showScreen('welcome');
+    }
+    
+    // Function to show presets for a specific category
+    function showPresetsForCategory(category) {
+        // Store the current category
+        state.currentSubjectCategory = category;
+        
+        // Update the presets container title
+        const presetsHeader = elements.screens.presets.querySelector('.screen-header h2');
+        if (presetsHeader) {
+            presetsHeader.textContent = `${category.name} Materials`;
+        }
+        
+        // Update back button to return to subject categories
+        const backBtn = elements.screens.presets.querySelector('#preset-back-btn');
+        if (backBtn) {
+            // Remove existing event listeners
+            const newBackBtn = backBtn.cloneNode(true);
+            backBtn.parentNode.replaceChild(newBackBtn, backBtn);
+            
+            // Add new event listener
+            newBackBtn.addEventListener('click', () => {
+                state.currentSubjectCategory = null;
+                displaySubjectCategories();
+            });
+        }
+        
+        // Display the presets for this category
+        displayPresetFilesForCategory(category);
+        
+        // Show the presets screen
+        showScreen('presets');
+    }
+    
+    // Function to display preset files for a specific category
+    function displayPresetFilesForCategory(category) {
+        if (!elements.presetsContainer) return;
+    
+        // Clear container
+        elements.presetsContainer.innerHTML = '';
+    
+        if (category.presets.length === 0) {
+            elements.presetsContainer.innerHTML = `<div class="preset-empty">No preset files found in the ${category.name} category.</div>`;
+            return;
+        }
+    
+        // Create element for each preset
+        category.presets.forEach(preset => {
+            const presetElement = document.createElement('div');
+            presetElement.className = 'preset-item';
+            
+            // Extract just the filename without path and extension
+            const displayName = preset.name || preset.filename.split('/').pop().replace('.csv', '');
+            
+            // Use consistent ID generation
+            const presetId = generatePresetId(preset.filename);
+            
+            const presetName = document.createElement('h3');
+            presetName.textContent = displayName;
+            
+            const presetDescription = document.createElement('p');
+            presetDescription.textContent = preset.description || `Load questions from ${displayName}`;
+            
+            // Check if there's saved progress for this preset
+            let hasSavedProgress = false;
+            if (window.QuickStudyMemory && typeof window.QuickStudyMemory.hasSavedProgress === 'function') {
+                hasSavedProgress = window.QuickStudyMemory.hasSavedProgress(presetId);
+            }
+            
+            // Create buttons container
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'preset-buttons';
+            
+            // Add "Continue" button if there's saved progress
+            if (hasSavedProgress) {
+                const continueButton = document.createElement('button');
+                continueButton.textContent = 'Continue';
+                continueButton.className = 'preset-continue-btn';
+                continueButton.addEventListener('click', () => loadPresetFile(preset.filename, true));
+                buttonContainer.appendChild(continueButton);
+            }
+            
+            // Add "Start New" button
+            const startButton = document.createElement('button');
+            startButton.textContent = hasSavedProgress ? 'Start New' : 'Select';
+            startButton.className = 'preset-select-btn';
+            startButton.addEventListener('click', () => loadPresetFile(preset.filename, false));
+            buttonContainer.appendChild(startButton);
+            
+            presetElement.appendChild(presetName);
+            presetElement.appendChild(presetDescription);
+            presetElement.appendChild(buttonContainer);
+            
+            elements.presetsContainer.appendChild(presetElement);
+        });
     }
 
     // Function to display preset files
@@ -1092,6 +1367,12 @@ document.addEventListener('DOMContentLoaded', function() {
         showScreen('study');
         loadQuestion();
     }
+
+    state.currentSubjectCategory = null;
+
+// Fetch presets with the new subject-based organization
+    fetchPresetFiles();
+
     // Function to highlight a specific category in the mastery overview
 function highlightCategoryInMasteryOverview(categoryToHighlight) {
     // First, remove any existing highlights
