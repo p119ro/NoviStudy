@@ -57,6 +57,11 @@ document.addEventListener('DOMContentLoaded', function() {
             maxTimeOverTarget: 1.5,  // 1.5x target time
             masteryThreshold: 90 // Percentage needed to consider a category mastered
         },
+        originalQuestions: [], // Store complete question set
+        selectedCategories: [], // Track selected categories
+        allCategoriesSelected: true, // Default: all categories selected
+        studyStarted: false, // Track if study session has started
+        answeredQuestions: [],
         // Settings
         isDarkMode: false,
         useTimeScoring: true,
@@ -66,6 +71,9 @@ document.addEventListener('DOMContentLoaded', function() {
         isProcessingAnswer: false,
         // After other state properties
         currentPresetId: null, // Used to track which preset is currently loaded
+        originalQuestions: [], // Store original question set for reference
+        selectedCategories: [], // Track which categories are selected
+        allCategoriesSelected: true, // Track if all categories are selected (default)
     };
 
     // DOM elements
@@ -1037,6 +1045,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to start the study session
     function startStudySession() {
         console.log("Starting study session with questions:", state.questions);
+
+        // Initialize category filtering state
+        state.originalQuestions = [...state.questions];
+        state.selectedCategories = [];
+        state.allCategoriesSelected = true;
+        state.studyStarted = false;
+        state.answeredQuestions = [];
         
         // If we're not continuing from saved progress (currentQuestionIndex is 0), reset state
         if (state.currentQuestionIndex === 0) {
@@ -1077,7 +1092,30 @@ document.addEventListener('DOMContentLoaded', function() {
         showScreen('study');
         loadQuestion();
     }
-
+    // Function to highlight a specific category in the mastery overview
+function highlightCategoryInMasteryOverview(categoryToHighlight) {
+    // First, remove any existing highlights
+    const categoryItems = document.querySelectorAll('.category-mastery-item');
+    categoryItems.forEach(item => {
+        item.classList.remove('highlighted');
+    });
+    
+    // Find the category item and highlight it
+    categoryItems.forEach(item => {
+        const nameElement = item.querySelector('.category-mastery-name');
+        if (nameElement && nameElement.textContent.toLowerCase() === categoryToHighlight.replace(/_/g, ' ').toLowerCase()) {
+            item.classList.add('highlighted');
+            
+            // Add a pulsing animation to draw attention
+            item.classList.add('pulse-animation');
+            
+            // Remove the animation class after it completes
+            setTimeout(() => {
+                item.classList.remove('pulse-animation');
+            }, 2000);
+        }
+    });
+}
     // Function to get the next non-mastered question
     function getNextQuestion() {
         // If using adaptive mastery, skip mastered categories
@@ -1101,6 +1139,33 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to load the current question - IMPROVED FOR MATH DISPLAY
     function loadQuestion() {
+
+            // Check if no categories are selected
+        if (!state.allCategoriesSelected && state.selectedCategories.length === 0) {
+            // Show message in question display
+            if (elements.questionDisplay) {
+                elements.questionDisplay.innerHTML = '<div class="no-question-message">Please select at least one category to continue.</div>';
+            }
+            
+            // Hide input areas
+            if (elements.frqContainer) elements.frqContainer.style.display = 'none';
+            if (elements.mcqContainer) elements.mcqContainer.style.display = 'none';
+            
+            // Disable submit button
+            if (elements.submitAnswer) {
+                elements.submitAnswer.disabled = true;
+            }
+            
+            // Update UI elements
+            elements.categoryDisplay.textContent = 'Category: None selected';
+            elements.difficultyDisplay.textContent = 'Difficulty: N/A';
+            elements.targetTime.textContent = 'Target: N/A';
+            
+            // Hide mastery badge
+            elements.mastery.classList.add('hidden');
+            
+            return;
+        }
         // Get the next unmastered question index
         const nextIndex = getNextQuestion();
         
@@ -1218,7 +1283,20 @@ document.addEventListener('DOMContentLoaded', function() {
         const difficulty = currentQuestion.difficulty || 'medium';
         const targetTime = currentQuestion.time || DEFAULT_TIME;
         
-        elements.categoryDisplay.textContent = `Category: ${category.replace(/_/g, ' ')}`;
+        // Make category display into a clickable button
+elements.categoryDisplay.innerHTML = `<span class="category-button">Category: ${category.replace(/_/g, ' ')}</span>`;
+elements.categoryDisplay.classList.add('clickable');
+elements.categoryDisplay.onclick = function() {
+    // Scroll to the category mastery section
+    document.querySelector('.mastery-overview').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    
+    // Highlight the specific category in the mastery overview
+    highlightCategoryInMasteryOverview(category);
+    
+    // Log to debug
+    console.log("Category clicked:", category);
+    console.log("Scrolling to:", document.querySelector('.mastery-overview'));
+};
         elements.difficultyDisplay.textContent = `Difficulty: ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}`;
         elements.targetTime.textContent = `Target: ${targetTime}s`;
         
@@ -1307,63 +1385,325 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Function to update category mastery overview
-    function updateCategoryMasteryOverview() {
-        // Clear the container
-        elements.categoryMasteryOverview.innerHTML = '';
+    // Updated updateCategoryMasteryOverview 
+    
+function updateCategoryMasteryOverview() {
+    // Clear the container
+    elements.categoryMasteryOverview.innerHTML = '';
+    
+    // Check if no categories are selected
+    if (!state.allCategoriesSelected && state.selectedCategories.length === 0) {
+        // Add message for no categories selected
+        const noSelectionMessage = document.createElement('div');
+        noSelectionMessage.className = 'no-categories-selected';
+        noSelectionMessage.innerHTML = '<p>No categories are selected, please select a category.</p>';
+        elements.categoryMasteryOverview.appendChild(noSelectionMessage);
         
-        // Create an item for each category
-        Object.keys(state.categories).forEach(category => {
-            const catData = state.categories[category];
-            const performanceData = state.categoryPerformance[category];
-            
-            const categoryItem = document.createElement('div');
-            categoryItem.className = 'category-mastery-item';
-            
-            const categoryName = document.createElement('div');
-            categoryName.className = 'category-mastery-name';
-            categoryName.textContent = category.replace(/_/g, ' ');
-            
-            const masteryBar = document.createElement('div');
-            masteryBar.className = 'category-mastery-bar';
-            
-            const masteryFill = document.createElement('div');
-            masteryFill.className = 'category-mastery-fill';
-            if (catData.isMastered) {
-                masteryFill.classList.add('mastered');
-            }
-            
-            // Use the mastery score from performance data if available
-            const masteryPercentage = performanceData.totalAttempts > 0 ? 
-                performanceData.masteryScore : catData.mastery;
-                
-            masteryFill.style.width = `${Math.round(masteryPercentage)}%`;
-            
-            const masteryValue = document.createElement('div');
-            masteryValue.className = 'category-mastery-value';
-            masteryValue.textContent = `${Math.round(masteryPercentage)}%`;
-            
-            // Add consecutive correct counter if applicable
-            if (performanceData.consecutiveCorrect > 0) {
-                masteryValue.textContent += ` (${performanceData.consecutiveCorrect}/${state.requiredCorrectAnswers})`;
-            }
-            
-            // Add mastery badge if mastered
-            if (catData.isMastered) {
-                const badge = document.createElement('div');
-                badge.className = 'category-badge';
-                badge.textContent = '✓';
-                categoryItem.appendChild(badge);
-            }
-            
-            masteryBar.appendChild(masteryFill);
-            
-            categoryItem.appendChild(categoryName);
-            categoryItem.appendChild(masteryBar);
-            categoryItem.appendChild(masteryValue);
-            
-            elements.categoryMasteryOverview.appendChild(categoryItem);
-        });
+        // Disable submit button if no categories are selected
+        if (elements.submitAnswer) {
+            elements.submitAnswer.disabled = true;
+        }
+    } else {
+        // Enable submit button if categories are selected
+        if (elements.submitAnswer) {
+            elements.submitAnswer.disabled = false;
+        }
     }
+    
+    // Add "Select All" / "Unselect All" button
+    const selectAllButton = document.createElement('div');
+    selectAllButton.className = 'category-mastery-item select-all-item' + 
+                             (state.allCategoriesSelected ? ' selected' : '');
+    
+    // Set the appropriate text based on selection state
+    const buttonText = state.allCategoriesSelected ? 'Unselect All' : 'Select All';
+    selectAllButton.innerHTML = `<div class="category-mastery-name">${buttonText}</div>`;
+    
+    // Add event listener to Select All button
+    selectAllButton.addEventListener('click', function() {
+        toggleAllCategories();
+    });
+    
+    elements.categoryMasteryOverview.appendChild(selectAllButton);
+    
+    // Create an item for each category
+    Object.keys(state.categories).forEach(category => {
+        const catData = state.categories[category];
+        const performanceData = state.categoryPerformance[category];
+        
+        const categoryItem = document.createElement('div');
+        categoryItem.className = 'category-mastery-item';
+        
+        // Add selected class if this category is selected
+        if (state.selectedCategories.includes(category) || state.allCategoriesSelected) {
+            categoryItem.classList.add('selected');
+        }
+        
+        // Make the category item clickable to toggle selection
+        categoryItem.dataset.category = category;
+        categoryItem.addEventListener('click', function() {
+            toggleCategorySelection(category);
+        });
+        
+        const categoryName = document.createElement('div');
+        categoryName.className = 'category-mastery-name';
+        categoryName.textContent = category.replace(/_/g, ' ');
+        
+        const masteryBar = document.createElement('div');
+        masteryBar.className = 'category-mastery-bar';
+        
+        const masteryFill = document.createElement('div');
+        masteryFill.className = 'category-mastery-fill';
+        if (catData.isMastered) {
+            masteryFill.classList.add('mastered');
+        }
+        
+        // Use the mastery score from performance data if available
+        const masteryPercentage = performanceData.totalAttempts > 0 ? 
+            performanceData.masteryScore : catData.mastery;
+            
+        masteryFill.style.width = `${Math.round(masteryPercentage)}%`;
+        
+        const masteryValue = document.createElement('div');
+        masteryValue.className = 'category-mastery-value';
+        masteryValue.textContent = `${Math.round(masteryPercentage)}%`;
+        
+        // Add consecutive correct counter if applicable
+        if (performanceData.consecutiveCorrect > 0) {
+            masteryValue.textContent += ` (${performanceData.consecutiveCorrect}/${state.requiredCorrectAnswers})`;
+        }
+        
+        // Add question count indicator
+        const questionCount = catData.questions.length;
+        const countElement = document.createElement('div');
+        countElement.className = 'category-question-count';
+        countElement.textContent = `${questionCount} questions`;
+        
+        // Add mastery badge if mastered
+        if (catData.isMastered) {
+            const badge = document.createElement('div');
+            badge.className = 'category-badge';
+            badge.textContent = '✓';
+            categoryItem.appendChild(badge);
+        }
+        
+        masteryBar.appendChild(masteryFill);
+        
+        categoryItem.appendChild(categoryName);
+        categoryItem.appendChild(countElement);
+        categoryItem.appendChild(masteryBar);
+        categoryItem.appendChild(masteryValue);
+        
+        elements.categoryMasteryOverview.appendChild(categoryItem);
+    });
+    
+    // Update the question counter to reflect the filtered questions
+    updateQuestionCounter();
+}
+
+
+    // Step 3: Add function to toggle category selection
+    function toggleCategorySelection(category) {
+        // If all categories were selected, we need to initialize the selectedCategories array
+        if (state.allCategoriesSelected) {
+            state.allCategoriesSelected = false;
+            // Select all categories except the one being toggled
+            state.selectedCategories = Object.keys(state.categories).filter(cat => cat !== category);
+        }
+        // Toggle the selected state of the category
+        else if (state.selectedCategories.includes(category)) {
+            // Deselecting: remove from array
+            state.selectedCategories = state.selectedCategories.filter(cat => cat !== category);
+        } else {
+            // Selecting: add to array
+            state.selectedCategories.push(category);
+            
+            // If all categories are now selected, set allCategoriesSelected flag
+            if (state.selectedCategories.length === Object.keys(state.categories).length) {
+                state.allCategoriesSelected = true;
+            }
+        }
+        
+        // Filter and rebuild the question queue without auto-submitting
+        rebuildQuestionQueue();
+        
+        // Update the category mastery overview to show selection status
+        updateCategoryMasteryOverview();
+    }
+    
+
+// Step 4: Function to select or deselect all categories
+function toggleAllCategories() {
+    // Toggle the all categories selected flag
+    state.allCategoriesSelected = !state.allCategoriesSelected;
+    
+    // If turning on all categories, clear selected categories array
+    if (state.allCategoriesSelected) {
+        state.selectedCategories = [];
+    }
+    // If turning off all categories, selectedCategories remains empty
+    else {
+        state.selectedCategories = [];
+    }
+    
+    // Rebuild the question queue
+    rebuildQuestionQueue();
+    
+    // Update the UI
+    updateCategoryMasteryOverview();
+}
+
+// Step 5: Function to rebuild the question queue based on selected categories
+function rebuildQuestionQueue() {
+    // If we have an original set of questions, use that as reference
+    if (state.originalQuestions.length === 0) {
+        state.originalQuestions = [...state.questions];
+    }
+
+    // Store the current question and index
+    const currentIndex = state.currentQuestionIndex;
+    const currentQuestion = currentIndex < state.questions.length ? 
+                           state.questions[currentIndex] : null;
+    
+    // Track if we were already in progress
+    const wasInProgress = state.studyStarted;
+    
+    // If the study hasn't started yet, we can simply filter the questions
+    if (!state.studyStarted) {
+        // Filter questions based on selected categories
+        if (state.allCategoriesSelected) {
+            // Use all original questions
+            state.questions = [...state.originalQuestions];
+        } else if (state.selectedCategories.length > 0) {
+            // Filter to only include selected categories
+            state.questions = state.originalQuestions.filter(question => 
+                state.selectedCategories.includes(question.category)
+            );
+        } else {
+            // No categories selected, empty the queue
+            state.questions = [];
+        }
+        
+        // Update the current index to 0
+        state.currentQuestionIndex = 0;
+    } else {
+        // Study has started, we need to maintain the current queue
+        
+        // Get all questions that have been answered so far
+        const answeredIndexes = state.questions.slice(0, currentIndex);
+        
+        // Find questions that haven't been answered yet from selected categories
+        let futureQuestions = [];
+        
+        // Only find future questions if categories are selected
+        if (state.allCategoriesSelected || state.selectedCategories.length > 0) {
+            futureQuestions = state.originalQuestions.filter(q => {
+                // Check if this question has already been answered
+                const alreadyAnswered = answeredIndexes.some(answered => 
+                    answered.question === q.question && answered.answer === q.answer
+                );
+                
+                // Include if not answered and from selected categories
+                return !alreadyAnswered && (state.allCategoriesSelected || 
+                       state.selectedCategories.includes(q.category));
+            });
+            
+            // Sort future questions using adaptive mastery
+            futureQuestions = sortQuestionsByAdaptiveMastery(futureQuestions);
+        }
+        
+        // Combine answered questions with future questions
+        state.questions = [...answeredIndexes, ...futureQuestions];
+        
+        // Maintain the current question index
+        state.currentQuestionIndex = currentIndex;
+    }
+    
+    // Update question counter display
+    updateQuestionCounter();
+    
+    // Only reload the question if we're on the study screen and there are questions available
+    if (elements.screens.study.classList.contains('active')) {
+        // Check if we have no categories selected
+        if (!state.allCategoriesSelected && state.selectedCategories.length === 0) {
+            // Show no-categories message and disable submit button
+            if (elements.submitAnswer) {
+                elements.submitAnswer.disabled = true;
+            }
+            
+            // Display message in question display area
+            if (elements.questionDisplay) {
+                elements.questionDisplay.innerHTML = '<div class="no-question-message">Please select at least one category to continue.</div>';
+            }
+            
+            // Hide input/MCQ containers
+            if (elements.frqContainer) elements.frqContainer.style.display = 'none';
+            if (elements.mcqContainer) elements.mcqContainer.style.display = 'none';
+        } else {
+            // Re-enable inputs
+            if (elements.frqContainer) elements.frqContainer.style.display = '';
+            if (elements.mcqContainer) elements.mcqContainer.style.display = state.isMCQ ? '' : 'none';
+            
+            // Re-enable submit button
+            if (elements.submitAnswer) {
+                elements.submitAnswer.disabled = false;
+            }
+            
+            // Load the question
+            loadQuestion();
+        }
+    }
+}
+
+
+// New function to sort questions using adaptive mastery
+function sortQuestionsByAdaptiveMastery(questions) {
+    // Sort questions to prioritize categories with lower mastery scores
+    return questions.sort((a, b) => {
+        // Get category data
+        const catA = state.categories[a.category];
+        const catB = state.categories[b.category];
+        
+        // Get performance data
+        const perfA = state.categoryPerformance[a.category];
+        const perfB = state.categoryPerformance[b.category];
+        
+        // Calculate mastery scores
+        const masteryA = perfA.totalAttempts > 0 ? perfA.masteryScore : catA.mastery;
+        const masteryB = perfB.totalAttempts > 0 ? perfB.masteryScore : catB.mastery;
+        
+        // Sort by mastery (ascending - lower mastery first)
+        if (masteryA !== masteryB) {
+            return masteryA - masteryB;
+        }
+        
+        // If mastery is the same, sort by difficulty
+        const difficultyMap = { 'easy': 1, 'medium': 2, 'hard': 3 };
+        const diffA = difficultyMap[a.difficulty] || 2;
+        const diffB = difficultyMap[b.difficulty] || 2;
+        
+        return diffB - diffA; // Higher difficulty first
+    });
+}
+
+
+
+// Step 6: Function to update the question counter
+function updateQuestionCounter() {
+    if (elements.questionCounter && state.questions.length > 0) {
+        elements.questionCounter.textContent = `Question ${state.currentQuestionIndex + 1}/${state.questions.length}`;
+    } else if (elements.questionCounter) {
+        elements.questionCounter.textContent = 'No questions selected';
+    }
+    
+    // Update progress bar
+    if (elements.progressFill) {
+        const progress = state.questions.length > 0 ? 
+                        ((state.currentQuestionIndex + 1) / state.questions.length) * 100 : 0;
+        elements.progressFill.style.width = `${progress}%`;
+    }
+}
+
 
     // Function to save current progress to localStorage
     function saveCurrentProgress() {
@@ -1726,6 +2066,8 @@ Make sure to review this topic in your notes or textbook.</div>
     
     // Process the answer result (after AI evaluation if applicable)
     function processAnswerResult(isCorrect, timeTaken, targetTime, timeScore) {
+
+        state.studyStarted = true;
         const currentQuestion = state.questions[state.currentQuestionIndex];
         const category = currentQuestion.category;
         const isWithinTimeLimit = timeTaken <= targetTime;
@@ -1862,6 +2204,61 @@ Make sure to review this topic in your notes or textbook.</div>
         saveCurrentProgress();
     }
     
+    // Add showEndOfSessionOptions function
+function showEndOfSessionOptions() {
+    const endDialog = document.createElement('div');
+    endDialog.className = 'end-session-dialog';
+    
+    const dialogContent = document.createElement('div');
+    dialogContent.className = 'end-session-content';
+    
+    const title = document.createElement('h3');
+    title.textContent = 'Practice Session Complete';
+    
+    const message = document.createElement('p');
+    message.textContent = 'You have completed all questions in this session. What would you like to do next?';
+    
+    const analyzeBtn = document.createElement('button');
+    analyzeBtn.textContent = 'Analyze Performance';
+    analyzeBtn.className = 'analyze-btn';
+    analyzeBtn.addEventListener('click', function() {
+        document.body.removeChild(endDialog);
+        showResults();
+    });
+    
+    const selectNewBtn = document.createElement('button');
+    selectNewBtn.textContent = 'Select New Categories';
+    selectNewBtn.className = 'new-categories-btn';
+    selectNewBtn.addEventListener('click', function() {
+        document.body.removeChild(endDialog);
+        
+        // Reset selection state
+        state.allCategoriesSelected = false;
+        state.selectedCategories = [];
+        
+        // Show study screen with category selection
+        showScreen('study');
+        
+        // Reset the question queue
+        rebuildQuestionQueue();
+        
+        // Update UI
+        updateCategoryMasteryOverview();
+    });
+    
+    // Append elements
+    dialogContent.appendChild(title);
+    dialogContent.appendChild(message);
+    dialogContent.appendChild(analyzeBtn);
+    dialogContent.appendChild(selectNewBtn);
+    endDialog.appendChild(dialogContent);
+    
+    // Add to body
+    document.body.appendChild(endDialog);
+}
+
+
+
     // Function to update category performance data
     function updateCategoryPerformance(category, isCorrect, isWithinTimeLimit, timeTaken, targetTime, timeScore) {
         // Get the performance data for this category
@@ -2040,7 +2437,8 @@ Make sure to review this topic in your notes or textbook.</div>
             showScreen('study');
             loadQuestion();
         } else {
-            showResults();
+            // End of questions - Show options
+            showEndOfSessionOptions();
         }
     }
     
