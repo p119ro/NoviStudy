@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NoviStudy</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="media/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="media/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="media/favicon-16x16.png">
+    <link rel="icon" type="image/x-icon" href="media/favicon.ico">
+    <link rel="icon" type="image/png" sizes="192x192" href="media/android-chrome-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="media/android-chrome-512x512.png">
+    <link rel="stylesheet" href="styles.css">
+    <!-- KaTeX for more efficient math rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+    <!-- MathJax for better math rendering -->
+    <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js" async></script>
+    <!-- Load answer-comparison.js first to ensure NoviStudyAI is available -->
+    <script src="answer-comparison.js"></script>
+    <script src="memory.js"></script>
+    <!-- Then load the main script -->
+    <script src="script.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>NoviStudy</h1>
+            <p class="tagline">Study smarter, not harder</p>
+        </header>
+        
+        <main>
+            <!-- Welcome Screen -->
+            <div id="welcome-screen" class="screen active">
+                <h2>Welcome to NoviStudy</h2>
+                <p>Master your tests with confidence</p>
+                <div class="file-upload">
+                    <p>Upload your question set CSV or use a preset:</p>
+                    
+                    <div class="upload-options">
+                        <label for="csv-upload" class="upload-btn">
+                            Choose File
+                            <input type="file" id="csv-upload" accept=".csv">
+                        </label>
+                        
+                        <span class="or-divider">OR</span>
+                        
+                        <button id="use-preset-btn" class="preset-btn">Use Preset</button>
+                    </div>
+                    
+                    <div class="format-info">
+                        <p>Supported CSV formats:</p>
+                        <div class="format-tabs">
+                            <button class="format-tab active" data-target="frq-format">Free Response</button>
+                            <button class="format-tab" data-target="mcq-format">Multiple Choice</button>
+                        </div>
+                        <div id="frq-format" class="format-content active">
+                            <code>question,answer,category,time,difficulty</code>
+                            <p>Example: "What is 3^2 + 4?",13,algebra,10,medium</p>
+                        </div>
+                        <div id="mcq-format" class="format-content">
+                            <code>question,correct_answer,options,category,time,difficulty</code>
+                            <p>Example: "What is the capital of France?,Paris,London;Berlin;Madrid;Paris,geography,8,easy"</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Presets Screen -->
+            <div id="presets-screen" class="screen">
+                <div class="screen-header">
+                    <h2>Select a Preset</h2>
+                    <button id="preset-back-btn" class="back-btn">
+                        <span class="back-arrow">&#8592;</span> Back
+                    </button>
+                </div>
+                
+                <div id="presets-container" class="presets-container">
+                    <!-- Presets will be loaded here dynamically -->
+                    <div class="preset-loading">Loading presets...</div>
+                </div>
+            </div>
+            
+            <!-- Study Screen -->
+            <div id="study-screen" class="screen">
+                <div class="progress-container">
+                    <div class="progress-info">
+                        <span id="question-counter">Question 1/10</span>
+                        <span id="category-display">Category: Basic Addition</span>
+                        <span id="difficulty-display">Difficulty: Easy</span>
+                        <div id="mastery-indicator">
+                            <span id="mastery-level">Mastery: 0%</span>
+                            <div class="mastery-progress">
+                                <div class="mastery-progress-fill"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="progress-bar">
+                        <div id="progress-fill"></div>
+                    </div>
+                </div>
+                
+                <div class="question-container">
+                    <div id="timer">00:00</div>
+                    <div id="target-time"></div>
+                    
+                    <!-- Mastery Badge -->
+                    <div id="mastery-badge" class="hidden">
+                        <div class="badge-icon">✓</div>
+                        <div class="badge-text">MASTERED</div>
+                    </div>
+                    
+                    <div id="question-display"></div>
+                    
+                    <!-- Free response input -->
+                    <div id="frq-container">
+                        <!-- Will be dynamically replaced with math-input-container -->
+                    </div>
+                    
+                    <!-- Multiple choice container -->
+                    <div id="mcq-container" class="hidden">
+                        <div class="mcq-options" id="mcq-options"></div>
+                    </div>
+                    
+                    <button id="submit-answer">Submit</button>
+                </div>
+                
+                <div class="stats-container">
+                    <div class="stat-box">
+                        <span class="stat-label">Correct</span>
+                        <span id="correct-count" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Incorrect</span>
+                        <span id="incorrect-count" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">Avg. Time</span>
+                        <span id="avg-time" class="stat-value">0s</span>
+                    </div>
+                </div>
+                
+                <div class="mastery-overview">
+                    <h3>Category Mastery</h3>
+                    <div id="category-mastery-overview"></div>
+                </div>
+            </div>
+            
+            <!-- Feedback Screen -->
+            <div id="feedback-screen" class="screen">
+                <div id="answer-feedback"></div>
+                <div id="time-feedback"></div>
+                <div id="time-score-feedback"></div>
+                
+                <div class="feedback-actions">
+                    <button id="see-explanation" class="secondary-btn">See Explanation</button>
+                </div>
+                
+                <div id="explanation-container" class="hidden">
+                    <div class="explanation-loading">
+                        <span class="processing-indicator"></span> Generating explanation...
+                    </div>
+                    <div id="explanation-content"></div>
+                </div>
+                
+                <div id="mastery-feedback" class="hidden">
+                    <div class="mastery-congrats">
+                        <div class="mastery-icon">🏆</div>
+                        <h3>Category Mastered!</h3>
+                        <p>You've shown consistent mastery of this category. Great work!</p>
+                    </div>
+                </div>
+                
+                <button id="next-question">Next Question</button>
+            </div>
+            
+            <!-- Results Screen -->
+            <div id="results-screen" class="screen">
+                <h2>Your Results</h2>
+                
+                <div class="overall-summary">
+                    <h3>Overall Performance</h3>
+                    <div class="results-summary">
+                        <div class="result-metric">
+                            <span class="metric-label">Accuracy:</span>
+                            <span id="final-accuracy" class="metric-value">0%</span>
+                        </div>
+                        <div class="result-metric">
+                            <span class="metric-label">Average Time:</span>
+                            <span id="final-avg-time" class="metric-value">0s</span>
+                        </div>
+                        <div class="result-metric">
+                            <span class="metric-label">Overall Mastery:</span>
+                            <span id="final-mastery" class="metric-value">Not Yet Mastered</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="category-results">
+                    <h3>Performance by Category</h3>
+                    <div id="category-results-container"></div>
+                </div>
+                
+                <div class="mastery-feedback" id="final-mastery-feedback"></div>
+                
+                <button id="restart-btn">Study Again</button>
+            </div>
+        </main>
+        
+        <footer>
+            <p>NoviStudy - Novi High School Edition</p>
+        </footer>
+    </div>
+    
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h2>Settings</h2>
+            
+            <div class="settings-group">
+                <h3>Appearance</h3>
+                <div class="settings-option">
+                    <label for="dark-mode-toggle">Dark Mode</label>
+                    <label class="switch">
+                        <input type="checkbox" id="dark-mode-toggle">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="settings-group">
+                <h3>Scoring</h3>
+                <div class="settings-option">
+                    <label for="time-scoring-toggle">Time-based Scoring</label>
+                    <label class="switch">
+                        <input type="checkbox" id="time-scoring-toggle" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="settings-group">
+                <h3>Mastery Detection</h3>
+                <div class="settings-option">
+                    <label for="adaptive-mastery-toggle">Adaptive Mastery</label>
+                    <label class="switch">
+                        <input type="checkbox" id="adaptive-mastery-toggle" checked>
+                        <span class="slider round"></span>
+                    </label>
+                    <div class="setting-description">
+                        When enabled, categories will be considered mastered after consistent correct answers.
+                    </div>
+                </div>
+                
+                <div class="settings-option">
+                    <label for="consecutive-correct-input">Required Correct Answers</label>
+                    <input type="number" id="consecutive-correct-input" min="5" max="30" value="10" class="settings-number-input">
+                    <div class="setting-description">
+                        Number of consecutive correct answers needed to achieve mastery.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="settings-btn" class="floating-btn">⚙️</div>
+</body>
+</html>
