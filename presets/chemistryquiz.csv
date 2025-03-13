@@ -1,41 +1,41 @@
-"question","answer","category","time","difficulty"
-"Find the pH of 0.450 M HNO3","0.35","pH Of Strong Acid","30","easy"
-"Find the pH of 0.450 M HNO2","1.85","pH Of Weak Acid","60","medium"
-"Find the pH of 0.250 M KOH","13.40","pH Of Strong Base","30","easy"
-"Find the pH of 0.250 M CH3NH2","12.02","pH Of Weak Base","60","medium"
-"Find the pH of 0.150 M NaF","8.17","pH Of Basic Salt","90","medium"
-"Find the pH of 0.450 M KCl","7.00","pH Of Neutral Salt","20","easy"
-"Find the pH of 0.450 M NH4NO3","4.80","pH Of Acidic Salt","90","medium"
-"Find the pH of 0.350 M NH3 with 0.250 M NH4Cl","9.40","pH Of Buffer","120","medium"
-"Find the pH of 0.0150 M HC2H3O2 with 0.0150 M NaC2H3O2","4.77","pH Of Buffer","120","medium"
-"What is the pH of 0.100 M HCl?","1.00","pH Of Strong Acid","20","easy"
-"What is the pOH of 0.010 M NaOH?","2.00","pH Of Strong Base","20","easy"
-"Calculate the pH of 0.200 M HBr","0.70","pH Of Strong Acid","30","easy"
-"Calculate the pOH of 0.005 M KOH","2.30","pH Of Strong Base","30","easy"
-"Find the pH of 0.300 M HF (Ka = 6.6 x 10^-4)","2.12","pH Of Weak Acid","90","hard"
-"What is the pH of 0.050 M NaOH?","12.70","pH Of Strong Base","20","easy"
-"Calculate the pH of 0.250 M HCN (Ka = 6.2 x 10^-10)","5.19","pH Of Weak Acid","120","hard"
-"Find the pH of 0.020 M NH3 (Kb = 1.8 x 10^-5)","10.98","pH Of Weak Base","90","medium"
-"Calculate the pH of 0.100 M CH3COOH (Ka = 1.8 x 10^-5)","2.87","pH Of Weak Acid","90","medium"
-"What is the pOH of 0.025 M Ba(OH)2?","1.60","pH Of Strong Base","40","medium"
-"Calculate the pH of 0.010 M H2SO4","1.70","pH Of Strong Acid","60","medium"
-"What is the pH of a buffer made from 0.200 M acetic acid and 0.100 M sodium acetate?","4.44","pH Of Buffer","150","hard"
-"Find the pH of 0.500 M NH4Cl","4.76","pH Of Acidic Salt","90","medium"
-"Calculate the pH of 0.200 M NaOH","13.30","pH Of Strong Base","30","easy"
-"What is the pOH of 0.050 M LiOH?","1.30","pH Of Strong Base","20","easy"
-"Calculate the pH of 0.300 M HNO3","0.52","pH Of Strong Acid","30","easy"
-"Find the pH of 0.150 M HF (Ka = 6.8 x 10^-4)","2.15","pH Of Weak Acid","90","hard"
-"What is the pH of 0.100 M NaC2H3O2?","8.87","pH Of Basic Salt","90","medium"
-"Calculate the pH of 0.100 M NH4Cl","5.13","pH Of Acidic Salt","90","medium"
-"What is the pH of 0.200 M HClO4?","0.70","pH Of Strong Acid","30","easy"
-"Calculate the pH of 0.050 M NaCN (Kb = 2.5 x 10^-5)","11.52","pH Of Basic Salt","120","hard"
-"Find the pH of 0.050 M CH3COOH with 0.050 M CH3COONa","4.74","pH Of Buffer","150","hard"
-"What is the pH of 0.300 M HCl?","0.52","pH Of Strong Acid","30","easy"
-"Calculate the pH of 0.100 M NaNO2 (Kb = 2.2 x 10^-11)","8.30","pH Of Basic Salt","120","hard"
-"What is the pH of 0.150 M NH3 with 0.150 M NH4Cl?","9.25","pH Of Buffer","150","hard"
-"Calculate the pH of 0.075 M HNO2 (Ka = 4.5 x 10^-4)","2.55","pH Of Weak Acid","120","hard"
-"What is the pH of 0.500 M NaOH?","13.70","pH Of Strong Base","20","easy"
-"Find the pH of 0.100 M HClO (Ka = 2.9 x 10^-8)","4.72","pH Of Weak Acid","120","hard"
-"Calculate the pH of 0.300 M NH3 (Kb = 1.8 x 10^-5)","11.29","pH Of Weak Base","90","medium"
-"What is the pH of 0.200 M NaF (Kb = 1.47 x 10^-11)?","8.36","pH Of Basic Salt","120","hard"
-"Find the pH of 0.100 M CH3COOH with 0.050 M CH3COONa","4.44","pH Of Buffer","150","hard"
+question,answer,category,time,difficulty
+Find the pH of 0.450 M HNO3,0.35,pH Of Strong Acid,30,easy
+Find the pH of 0.450 M HNO2,1.85,pH Of Weak Acid,60,medium
+Find the pH of 0.250 M KOH,13.40,pH Of Strong Base,30,easy
+Find the pH of 0.250 M CH3NH2,12.02,pH Of Weak Base,60,medium
+Find the pH of 0.150 M NaF,8.17,pH Of Basic Salt,90,medium
+Find the pH of 0.450 M KCl,7.00,pH Of Neutral Salt,20,easy
+Find the pH of 0.450 M NH4NO3,4.80,pH Of Acidic Salt,90,medium
+Find the pH of 0.350 M NH3 with 0.250 M NH4Cl,9.40,pH Of Buffer,120,medium
+Find the pH of 0.0150 M HC2H3O2 with 0.0150 M NaC2H3O2,4.77,pH Of Buffer,120,medium
+What is the pH of 0.100 M HCl?,1.00,pH Of Strong Acid,20,easy
+What is the pOH of 0.010 M NaOH?,2.00,pH Of Strong Base,20,easy
+Calculate the pH of 0.200 M HBr,0.70,pH Of Strong Acid,30,easy
+Calculate the pOH of 0.005 M KOH,2.30,pH Of Strong Base,30,easy
+Find the pH of 0.300 M HF (Ka = 6.6 x 10^-4),2.12,pH Of Weak Acid,90,hard
+What is the pH of 0.050 M NaOH?,12.70,pH Of Strong Base,20,easy
+Calculate the pH of 0.250 M HCN (Ka = 6.2 x 10^-10),5.19,pH Of Weak Acid,120,hard
+Find the pH of 0.020 M NH3 (Kb = 1.8 x 10^-5),10.98,pH Of Weak Base,90,medium
+Calculate the pH of 0.100 M CH3COOH (Ka = 1.8 x 10^-5),2.87,pH Of Weak Acid,90,medium
+What is the pOH of 0.025 M Ba(OH)2?,1.60,pH Of Strong Base,40,medium
+Calculate the pH of 0.010 M H2SO4,1.70,pH Of Strong Acid,60,medium
+What is the pH of a buffer made from 0.200 M acetic acid and 0.100 M sodium acetate?,4.44,pH Of Buffer,150,hard
+Find the pH of 0.500 M NH4Cl,4.76,pH Of Acidic Salt,90,medium
+Calculate the pH of 0.200 M NaOH,13.30,pH Of Strong Base,30,easy
+What is the pOH of 0.050 M LiOH?,1.30,pH Of Strong Base,20,easy
+Calculate the pH of 0.300 M HNO3,0.52,pH Of Strong Acid,30,easy
+Find the pH of 0.150 M HF (Ka = 6.8 x 10^-4),2.15,pH Of Weak Acid,90,hard
+What is the pH of 0.100 M NaC2H3O2?,8.87,pH Of Basic Salt,90,medium
+Calculate the pH of 0.100 M NH4Cl,5.13,pH Of Acidic Salt,90,medium
+What is the pH of 0.200 M HClO4?,0.70,pH Of Strong Acid,30,easy
+Calculate the pH of 0.050 M NaCN (Kb = 2.5 x 10^-5),11.52,pH Of Basic Salt,120,hard
+Find the pH of 0.050 M CH3COOH with 0.050 M CH3COONa,4.74,pH Of Buffer,150,hard
+What is the pH of 0.300 M HCl?,0.52,pH Of Strong Acid,30,easy
+Calculate the pH of 0.100 M NaNO2 (Kb = 2.2 x 10^-11),8.30,pH Of Basic Salt,120,hard
+What is the pH of 0.150 M NH3 with 0.150 M NH4Cl?,9.25,pH Of Buffer,150,hard
+Calculate the pH of 0.075 M HNO2 (Ka = 4.5 x 10^-4),2.55,pH Of Weak Acid,120,hard
+What is the pH of 0.500 M NaOH?,13.70,pH Of Strong Base,20,easy
+Find the pH of 0.100 M HClO (Ka = 2.9 x 10^-8),4.72,pH Of Weak Acid,120,hard
+Calculate the pH of 0.300 M NH3 (Kb = 1.8 x 10^-5),11.29,pH Of Weak Base,90,medium
+What is the pH of 0.200 M NaF (Kb = 1.47 x 10^-11)?,8.36,pH Of Basic Salt,120,hard
+Find the pH of 0.100 M CH3COOH with 0.050 M CH3COONa,4.44,pH Of Buffer,150,hard
