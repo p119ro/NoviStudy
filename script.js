@@ -591,8 +591,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
             // Preset files - assign to appropriate categories
             const chemistryQuiz = {
-                name: 'AP Chemistry Quiz',
-                filename: 'presets/chemistryquiz.csv',
+                name: 'AP Chemistry Unit 17 MCQ Review',
+                filename: 'presets/unit17mcqreview.csv',
                 description: 'Finding pH for the quiz on Thursday'
             };
             
