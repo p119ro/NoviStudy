@@ -596,9 +596,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 description: 'Finding pH for the quiz on Thursday'
             };
             
-            const chemistryUnit16 = {
-                name: 'AP Chemistry Unit 16',
-                filename: 'presets/apchemistryunit16.csv',
+            const chemistryUnit17 = {
+                name: 'AP Chemistry Unit 17',
+                filename: 'presets/apchemistryunit17.csv',
                 description: 'Brønsted-Lowry and Lewis acid-base concepts'
             };
     
@@ -636,7 +636,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const chemistry = subjectCategories.find(cat => cat.id === 'chemistry');
             if (chemistry) {
                 chemistry.presets.push(chemistryQuiz);
-                chemistry.presets.push(chemistryUnit16);
+                chemistry.presets.push(chemistryUnit17);
             }
     
             const calculus = subjectCategories.find(cat => cat.id === 'calculus');
