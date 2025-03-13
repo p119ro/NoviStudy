@@ -1,41 +1,37 @@
-question,answer,category,time,difficulty
-Find the pH of 0.450 M HNO3,0.35,pH Of Strong Acid,30,easy
-Find the pH of 0.450 M HNO2,1.85,pH Of Weak Acid,60,medium
-Find the pH of 0.250 M KOH,13.40,pH Of Strong Base,30,easy
-Find the pH of 0.250 M CH3NH2,12.02,pH Of Weak Base,60,medium
-Find the pH of 0.150 M NaF,8.17,pH Of Basic Salt,90,medium
-Find the pH of 0.450 M KCl,7.00,pH Of Neutral Salt,20,easy
-Find the pH of 0.450 M NH4NO3,4.80,pH Of Acidic Salt,90,medium
-Find the pH of 0.350 M NH3 with 0.250 M NH4Cl,9.40,pH Of Buffer,120,medium
-Find the pH of 0.0150 M HC2H3O2 with 0.0150 M NaC2H3O2,4.77,pH Of Buffer,120,medium
-What is the pH of 0.100 M HCl?,1.00,pH Of Strong Acid,20,easy
-What is the pOH of 0.010 M NaOH?,2.00,pH Of Strong Base,20,easy
-Calculate the pH of 0.200 M HBr,0.70,pH Of Strong Acid,30,easy
-Calculate the pOH of 0.005 M KOH,2.30,pH Of Strong Base,30,easy
-Find the pH of 0.300 M HF (Ka = 6.6 x 10^-4),2.12,pH Of Weak Acid,90,hard
-What is the pH of 0.050 M NaOH?,12.70,pH Of Strong Base,20,easy
-Calculate the pH of 0.250 M HCN (Ka = 6.2 x 10^-10),5.19,pH Of Weak Acid,120,hard
-Find the pH of 0.020 M NH3 (Kb = 1.8 x 10^-5),10.98,pH Of Weak Base,90,medium
-Calculate the pH of 0.100 M CH3COOH (Ka = 1.8 x 10^-5),2.87,pH Of Weak Acid,90,medium
-What is the pOH of 0.025 M Ba(OH)2?,1.60,pH Of Strong Base,40,medium
-Calculate the pH of 0.010 M H2SO4,1.70,pH Of Strong Acid,60,medium
-What is the pH of a buffer made from 0.200 M acetic acid and 0.100 M sodium acetate?,4.44,pH Of Buffer,150,hard
-Find the pH of 0.500 M NH4Cl,4.76,pH Of Acidic Salt,90,medium
-Calculate the pH of 0.200 M NaOH,13.30,pH Of Strong Base,30,easy
-What is the pOH of 0.050 M LiOH?,1.30,pH Of Strong Base,20,easy
-Calculate the pH of 0.300 M HNO3,0.52,pH Of Strong Acid,30,easy
-Find the pH of 0.150 M HF (Ka = 6.8 x 10^-4),2.15,pH Of Weak Acid,90,hard
-What is the pH of 0.100 M NaC2H3O2?,8.87,pH Of Basic Salt,90,medium
-Calculate the pH of 0.100 M NH4Cl,5.13,pH Of Acidic Salt,90,medium
-What is the pH of 0.200 M HClO4?,0.70,pH Of Strong Acid,30,easy
-Calculate the pH of 0.050 M NaCN (Kb = 2.5 x 10^-5),11.52,pH Of Basic Salt,120,hard
-Find the pH of 0.050 M CH3COOH with 0.050 M CH3COONa,4.74,pH Of Buffer,150,hard
-What is the pH of 0.300 M HCl?,0.52,pH Of Strong Acid,30,easy
-Calculate the pH of 0.100 M NaNO2 (Kb = 2.2 x 10^-11),8.30,pH Of Basic Salt,120,hard
-What is the pH of 0.150 M NH3 with 0.150 M NH4Cl?,9.25,pH Of Buffer,150,hard
-Calculate the pH of 0.075 M HNO2 (Ka = 4.5 x 10^-4),2.55,pH Of Weak Acid,120,hard
-What is the pH of 0.500 M NaOH?,13.70,pH Of Strong Base,20,easy
-Find the pH of 0.100 M HClO (Ka = 2.9 x 10^-8),4.72,pH Of Weak Acid,120,hard
-Calculate the pH of 0.300 M NH3 (Kb = 1.8 x 10^-5),11.29,pH Of Weak Base,90,medium
-What is the pH of 0.200 M NaF (Kb = 1.47 x 10^-11)?,8.36,pH Of Basic Salt,120,hard
-Find the pH of 0.100 M CH3COOH with 0.050 M CH3COONa,4.44,pH Of Buffer,150,hard
+question,correct_answer,options,category,time,difficulty
+"1) The conjugate base of HSO4- is","SO4^2-","H2SO4;SO4^2-;H3SO4^+;HSO4^+;OH^-","Conjugate Acids/Bases",30,Easy
+"2) The conjugate acid of HSO4- is","H2SO4","H^+;H2SO4;HSO4^+;SO4^2-;HSO3^+","Conjugate Acids/Bases",30,Easy
+"3) The molar concentration of hydronium ion in pure water at 25°C is","1.0 × 10^-7","7.00;1.0 × 10^-7;1.00;1.0 × 10^-14;0.00","pH Calculations",45,Medium
+"4) The molar concentration of hydroxide ion in pure water at 25°C is","1.0 × 10^-7","1.00;1.0 × 10^-14;1.0 × 10^-7;0.00;7.00","pH Calculations",45,Medium
+"5) What is the pH of an aqueous solution at 25°C in which [OH-] is 0.0025 M?","+11.40","+2.60;-2.60;+11.40;-11.40;-2.25","pH Calculations",60,Medium
+"6) What is the pH of an aqueous solution at 25° that contains 3.98 × 10^-9 M hydronium ion?","8.400","7.000;9.000;8.400;5.600;3.980","pH Calculations",60,Medium
+"7) What is the concentration (in M) of hydronium ions in a solution at 25°C with pH = 4.282?","5.22 × 10^-5","4.28;1.92 × 10^-10;1.66 × 10^4;9.71;5.22 × 10^-5","pH Calculations",60,Medium
+"8) Which solution below has the highest concentration of hydroxide ions?","pH=12.59","pH=3.21;pH=9.82;pH=7.93;pH=12.59;pH=7.00","pH Calculations",45,Medium
+"9) What is the pH of a 0.015-M aqueous solution of barium hydroxide?","12.48","12.18;1.52;12.48;1.82;10.35","pH Calculations",75,Hard
+"10) Sodium hydroxide is a strong base. This means that","NaOH dissociates completely to Na^+(aq) and OH^-(aq) when it dissolves in water","aqueous solutions of NaOH contain equal concentrations of H^+(aq) and OH^-(aq);NaOH does not dissociate at all when it is dissolved in water;NaOH dissociates completely to Na^+(aq) and OH^-(aq) when it dissolves in water;NaOH cannot be neutralized by a weak acid;NaOH cannot be neutralized by ordinary means","Acid-Base Properties",45,Medium
+"11) Of the following acids, is not a strong acid.","HNO2","HNO3;HCl;HNO2;HClO4;H2SO4","Acid Strength",30,Easy
+"12) Of the following, is a weak acid.","HF","HBr;HF;HClO4;HCl;HNO3","Acid Strength",30,Easy
+"13) Which one of the following is the weakest acid?","HCN (Ka = 4.9 × 10^-10)","HF (Ka = 6.8 × 10^-4);Acetic acid (Ka = 1.8 × 10^-5);HNO2 (Ka = 4.5 × 10^-4);HClO (Ka = 3.0 × 10^-8);HCN (Ka = 4.9 × 10^-10)","Acid Strength",45,Medium
+"14) HZ is a weak acid. An aqueous solution of HZ is prepared by dissolving 0.020 mol of HZ in sufficient water to yield 1.00 L of solution. The pH of the solution was 4.93 at 25°C. The Ka of HZ is","6.9 × 10^-9","6.9 × 10^-9;1.4 × 10^-10;1.2 × 10^-5;2.8 × 10^-12;9.9 × 10^-2","Weak Acids",90,Hard
+"15) The Ka of hypochlorous acid (HClO) is 3.0 × 10^-8 at 25°C. What is the % ionization of hypochlorous acid in a 0.015-M aqueous solution of HClO at 25°C?","0.14","1.4 × 10^-3;14;2.1 × 10^-5;4.5 × 10^-8;0.14","Weak Acids",90,Hard
+"16) The pH of a 0.55-M aqueous solution of hypobromous acid, HBrO, at 25°C is 4.48. What is the value of Ka for HBrO?","2.0 × 10^-9","3.3 × 10^-5;2.0 × 10^-9;6.0 × 10^-5;1.1 × 10^-9;3.0 × 10^4","Weak Acids",90,Hard
+"17) The Ka of hypochlorous acid (HClO) is 3.0 × 10^-8. What is the pH at 25°C of an aqueous solution that is 0.020 M in HClO?","+4.61","+2.45;-2.45;-9.22;+9.22;+4.61","Weak Acids",75,Hard
+"18) The acid-dissociation constants of phosphoric acid (H3PO4) are Ka1 = 7.5 × 10^-3, Ka2 = 6.2 × 10^-8, and Ka3 = 4.2 × 10^-13 at 25°C. What is the pH of a 2.5-M aqueous solution of phosphoric acid?","0.87","0.13;1.8;2.5;0.40;0.87","Polyprotic Acids",90,Hard
+"19) B is a weak base. Which equilibrium corresponds to the equilibrium constant Ka for HB+?","HB^+(aq) + H2O(l) ⇌ B(aq) + H3O^+(aq)","HB^+(aq) + H3O^+(aq) ⇌ H2B^2+(aq) + H2O(l);B(aq) + H2O(l) ⇌ HB^+(aq) + OH^-(aq);HB^+(aq) + OH^-(aq) ⇌ B(aq) + H2O(l);B(aq) + H3O^+(aq) ⇌ HB^+(aq) + H2O(l);HB^+(aq) + H2O(l) ⇌ B(aq) + H3O^+(aq)","Weak Bases",60,Medium
+"20) The acid-dissociation constant for chlorous acid, HClO2, at 25°C is 1.0 × 10^-2. Calculate the concentration of H+ if the initial concentration of acid is 0.100 M.","2.7 × 10^-2","1.0 × 10^-3;1.0 × 10^-2;2.7 × 10^-2;3.7 × 10^-2;3.2 × 10^-2","Weak Acids",75,Hard
+"21) Ammonia is a","weak base","weak base;strong acid;salt;strong base;weak acid","Acid-Base Properties",30,Easy
+"22) The pH of a 0.10-M solution of a weak base is 9.82. What is the Kb for this base?","4.3 × 10^-8","4.3 × 10^-8;2.0 × 10^-5;6.6 × 10^-4;2.1 × 10^-4;8.8 × 10^-8","Weak Bases",90,Hard
+"23) Using the data in the table, which of the conjugate bases below is the strongest base?","ClO^-","F^-;ClO^-;CHO2^-;OAc^-;OAc^- and CHO2^-","Conjugate Acids/Bases",45,Medium
+"24) The base-dissociation constant, Kb, for pyridine, C5H5N, is 1.4 × 10^-9. The acid-dissociation constant, Ka, for the pyridinium ion, C5H5NH+, is","7.1 × 10^-6","7.1 × 10^-6;1.4 × 10^-5;1.0 × 10^-7;1.4 × 10^-23;7.1 × 10^-4","Weak Bases",75,Hard
+"25) Which of the following ions will act as a weak base in water?","ClO^-","ClO^-;Cl^-;NO3^-;OH^-;None of the above will act as a weak base in water.","Weak Bases",45,Medium
+"26) Determine the pH of a 0.15-M aqueous solution of KF. For hydrofluoric acid, Ka = 7.0 × 10^-4.","8.16","5.83;6.59;8.16;2.33;12.01","Salt Solutions",90,Hard
+"27) A 0.0035-M aqueous solution of a particular compound has pH = 2.46. The compound is","a strong acid","a strong base;a weak acid;a weak base;a strong acid;a salt","Acid-Base Properties",60,Medium
+"28) The Ka for formic acid (HCHO2) is 1.8 × 10^-4. What is the pH of a 0.35-M aqueous solution of sodium formate (NaCHO2)?","8.64","5.36;8.64;10.71;4.20;3.29","Salt Solutions",90,Hard
+"29) A 0.1-M aqueous solution of will have a pH of 7.0 at 25.0°C.","KCl","NaOCl;KCl;NH4Cl;Ca(OAc)2;KCl and NH4Cl","Salt Solutions",45,Medium
+"30) An aqueous solution of will produce a basic solution.","Na2SO4","NaCl;NaHSO4;KBr;NH4ClO4;Na2SO4","Salt Solutions",45,Medium
+"31) Of the following, the acid strength of is the greatest.","Cl3CCOOH","Cl3CCOOH;CH3COOH;BrCH2COOH;ClCH2COOH;Cl2CHCOOH","Acid Strength",45,Medium
+"32) A 0.10-M solution of the sodium salt of which of the following anions will have the highest pH?","IO^-","ClO2^-;IO3^-;IO^-;ClO^-;IO2^-","Salt Solutions",60,Medium
+"33) Which one of the following cannot act as a Lewis base?","BF3","NH3;BF3;Cl^-;CN^-;H2O","Lewis Acids/Bases",45,Medium
+"34) Metal oxides are typically while nonmetal oxides are typically","basic, acidic","acidic, basic;basic, amphoteric;basic, acidic;amphoteric, basic;amphoteric, acidic","Oxides",30,Easy
+"35) Which equation correctly represents the reaction between carbon dioxide and water?","CO2(aq) + H2O(l) → H2CO3(aq)","CO2(aq) + H2O(l) → H2CO(aq) + O2(g);CO2(aq) + H2O(l) → H2O(g) + CO(g) + O2(g);CO2(aq) + H2O(l) → H2O2(aq) + CO(g);CO2(aq) + 2H2O(l) → CH4(g) + 2O2(aq);CO2(aq) + H2O(l) → H2CO3(aq)","Acid-Base Reactions",45,Medium
+"36) Which of the following substances will dissolve in water to produce an acidic solution?","FeCl3","NH3;Na2O;NaC2H3O2;C6H12O6;FeCl3","Salt Solutions",45,Medium
