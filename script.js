@@ -593,13 +593,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const chemistryQuiz = {
                 name: 'AP Chemistry Unit 17 MCQ Review',
                 filename: 'presets/unit17mcqreview.csv',
-                description: 'Finding pH for the quiz on Thursday'
+                description: 'MCQ Review for Test'
             };
             
             const chemistryUnit17 = {
                 name: 'AP Chemistry Unit 17',
                 filename: 'presets/apchemistryunit17.csv',
-                description: 'Brønsted-Lowry and Lewis acid-base concepts'
+                description: 'HW Problems and More'
             };
     
             const calculusUnit7 = {
