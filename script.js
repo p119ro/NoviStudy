@@ -573,13 +573,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     description: 'AP Statistics study materials',
                     presets: []
                 },
+
                 {
-                    id: 'physics',
-                    name: 'Physics',
-                    icon: '⚛️',
-                    description: 'AP Physics study materials',
+                    id: 'business',
+                    name: 'Business',
+                    icon: '💸',
+                    description: 'IB Business study materials',
                     presets: []
                 },
+
                 {
                     id: 'economics',
                     name: 'Economics',
@@ -618,12 +620,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 name: 'AP Stats Unit 8 & 9 Test',
                 filename: 'presets/apstatsunit89.csv',
                 description: 'Estimating proportions with confidence & Testing claims about proportions'
-            };
-    
-            const physicsUnit4 = {
-                name: 'AP Physics Unit 4 Test',
-                filename: 'presets/apphysicsunit4.csv',
-                description: 'Physics test prep'
             };
     
             const macroUnit3 = {
