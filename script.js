@@ -597,6 +597,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 filename: 'presets/unit17mcqreview.csv',
                 description: 'MCQ Review for Test'
             };
+
+            const pHcalculations = {
+                name: 'pH Calculation Quiz Review',
+                filename: 'presets/pHcalculations.csv',
+                description: 'pH Test Prep'
+            };
             
             const chemistryUnit17 = {
                 name: 'AP Chemistry Unit 17',
@@ -633,6 +639,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (chemistry) {
                 chemistry.presets.push(chemistryQuiz);
                 chemistry.presets.push(chemistryUnit17);
+                chemistry.presets.push(pHcalculations);
             }
     
             const calculus = subjectCategories.find(cat => cat.id === 'calculus');
