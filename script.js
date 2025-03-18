@@ -575,7 +575,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
 
                 {
-<<<<<<< HEAD
                     id: 'business',
                     name: 'Business',
                     icon: '💸',
@@ -584,8 +583,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
 
                 {
-=======
->>>>>>> 90a6b16 (Added IB Business)
                     id: 'economics',
                     name: 'Economics',
                     icon: '💰',
@@ -691,14 +688,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const bizunit4_5d = {
                 name: 'IB Business unit 4.5 D',
-                filename : 'presets/ibbusiness4.5.d.csv',
+                filename : 'presets/ibbusiness.4.5.d.csv',
                 description : 'Unit 4.5 D MCQ questions'
             }
 
             const bizunit4_5e = {
                 name: 'IB Business unit 4.5 E',
-                filename : 'presets/ibbusiness4.5.e.csv',
-                description : 'Unit 4.5 D MCQ questions'
+                filename : 'presets/ibbusiness.4.5.e.csv',
+                description : 'Unit 4.5 E MCQ questions'
+            }
+
+            const bizunit4_5f = {
+                name: 'IB Business unit 4.5 F',
+                filename : 'presets/ibbusiness4.5.f.csv',
+                description : 'Unit 4.5 F MCQ questions'
+            }
+
+            const bizunit4_5g = {
+                name: 'IB Business unit 4.5 G',
+                filename : 'presets/ibbusiness4.5.g.csv',
+                description : 'Unit 4.5 G MCQ questions'
+            }
+
+            const bizunit4_6 = {
+                name: 'IB Business unit 4.6 ',
+                filename: 'presets/ibbusiness4.6.csv',
+                description: 'Unit 4.6 MCQ Questions'
             }
     
             // Add presets to their respective categories
@@ -741,6 +756,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 ib_business.presets.push(bizunit4_5c)
                 ib_business.presets.push(bizunit4_5d)
                 ib_business.presets.push(bizunit4_5e)
+                ib_business.presets.push(bizunit4_5g)
+                ib_business.presets.push(bizunit4_5f)
+                ib_business.presets.push(bizunit4_6)
             }
     
             // Filter out empty categories
