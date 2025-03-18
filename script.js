@@ -575,6 +575,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
 
                 {
+<<<<<<< HEAD
                     id: 'business',
                     name: 'Business',
                     icon: '💸',
@@ -583,12 +584,24 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
 
                 {
+=======
+>>>>>>> 90a6b16 (Added IB Business)
                     id: 'economics',
                     name: 'Economics',
                     icon: '💰',
                     description: 'AP Economics study materials',
                     presets: []
+                
+                },
+
+                {
+                    id: 'ib-business',
+                    name: 'IB Business',
+                    icon: '💼',
+                    description: 'IB Business Study materials',
+                    presets: []
                 }
+
             ];
     
             // Preset files - assign to appropriate categories
@@ -633,6 +646,60 @@ document.addEventListener('DOMContentLoaded', function() {
                 filename: 'presets/apmacrounit3.csv',
                 description: 'MPC and MPS'
             };
+
+            const bizunit4_1 = {
+                name: 'IB Business unit 4.1',
+                filename : 'presets/ibbusiness4.1.csv',
+                description : 'Unit 4.1 MCQ questions'
+            }
+
+            const bizunit4_2 = {
+                name: 'IB Business unit 4.2',
+                filename : 'presets/ibbusiness4.2.csv',
+                description : 'Unit 4.2 MCQ questions'
+            }
+
+            const bizunit4_3 = {
+                name: 'IB Business unit 4.3',
+                filename : 'presets/ibbusiness4.3.csv',
+                description : 'Unit 4.3 MCQ questions'
+            }
+
+            const bizunit4_4 = {
+                name: 'IB Business unit 4.4',
+                filename : 'presets/ibbusiness4.4.csv',
+                description : 'Unit 4.4 MCQ questions'
+            }
+
+            const bizunit4_5a = {
+                name: 'IB Business unit 4.5 A',
+                filename : 'presets/ibbusiness4.5a.csv',
+                description : 'Unit 4.5 A MCQ questions'
+            }
+
+            const bizunit4_5b = {
+                name: 'IB Business unit 4.5 B',
+                filename : 'presets/ibbusiness4.5b.csv',
+                description : 'Unit 4.5 B MCQ questions'
+            }
+
+            const bizunit4_5c = {
+                name: 'IB Business unit 4.5 C',
+                filename : 'presets/ibbusiness4.5.c.csv',
+                description : 'Unit 4.5 C MCQ questions'
+            }
+
+            const bizunit4_5d = {
+                name: 'IB Business unit 4.5 D',
+                filename : 'presets/ibbusiness4.5.d.csv',
+                description : 'Unit 4.5 D MCQ questions'
+            }
+
+            const bizunit4_5e = {
+                name: 'IB Business unit 4.5 E',
+                filename : 'presets/ibbusiness4.5.e.csv',
+                description : 'Unit 4.5 D MCQ questions'
+            }
     
             // Add presets to their respective categories
             const chemistry = subjectCategories.find(cat => cat.id === 'chemistry');
@@ -661,6 +728,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const economics = subjectCategories.find(cat => cat.id === 'economics');
             if (economics) {
                 economics.presets.push(macroUnit3);
+            }
+
+            const ib_business = subjectCategories.find(cat => cat.id === 'ib-business' );
+            if (ib_business){
+                ib_business.presets.push(bizunit4_1)
+                ib_business.presets.push(bizunit4_2)
+                ib_business.presets.push(bizunit4_3)
+                ib_business.presets.push(bizunit4_4)
+                ib_business.presets.push(bizunit4_5a)
+                ib_business.presets.push(bizunit4_5b)
+                ib_business.presets.push(bizunit4_5c)
+                ib_business.presets.push(bizunit4_5d)
+                ib_business.presets.push(bizunit4_5e)
             }
     
             // Filter out empty categories
