@@ -47,9 +47,12 @@
                 createLoginUI();
                 
                 // Show login screen
-                if (!auth.currentUser) {
-                    showLoginScreen();
-                }
+                // Add this at the top of the file with other variables
+                let authStateChecked = false;
+
+                // Then replace the "Show login screen" section in the initialize() function with:
+                // Don't show login screen until auth state is determined
+                document.body.classList.add('qs-auth-loading');
                 
                 firebaseInitialized = true;
                 console.log("Firebase Auth initialized successfully");
@@ -93,6 +96,10 @@
      * Handle auth state changes
      */
     function handleAuthStateChanged(user) {
+        // Remove loading state
+        document.body.classList.remove('qs-auth-loading');
+        authStateChecked = true;
+        
         currentUser = user;
         
         if (user) {
@@ -108,7 +115,11 @@
         } else {
             console.log("User signed out");
             hideUserInfo();
-            showLoginScreen();
+            
+            // Only show login screen if we've confirmed user is not authenticated
+            if (authStateChecked) {
+                showLoginScreen();
+            }
         }
     }
     
@@ -1412,6 +1423,27 @@
             
             .qs-logout-button:hover {
                 background-color: #c0392b;
+            }
+
+            /* Add this to your CSS styles */
+            .qs-auth-loading .qs-auth-container {
+                display: none;
+            }
+
+            /* Loading state with no auth flicker */
+            .qs-auth-loading::before {
+                content: '';
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: #fff;
+                z-index: 9998;
+            }
+
+            .dark-mode.qs-auth-loading::before {
+                background-color: #2c3e50;
             }
             
             /* Responsive styles */

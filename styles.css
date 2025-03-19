@@ -1627,6 +1627,69 @@ input:checked + .slider:before {
     color: #bdc3c7;
 }
 
+/* Replace your current "Fix settings modal positioning flicker" section with this */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden; /* Prevent scrolling */
+    background-color: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.modal.show {
+    opacity: 1;
+}
+
+/* Replace your modal-content styles with this */
+.modal-content {
+    background-color: var(--card-bg);
+    padding: 30px;
+    border-radius: var(--border-radius);
+    box-shadow: var(--box-shadow);
+    width: 80%;
+    max-width: 500px;
+    max-height: 80vh; /* Add max height */
+    overflow-y: auto; /* Allow scrolling if needed */
+    
+    /* Force center positioning */
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    margin: 0 !important; /* Override the 15% top margin */
+    
+    opacity: 0;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.dark-mode .modal-content {
+    background-color: var(--card-bg-dark);
+    box-shadow: var(--box-shadow-dark);
+}
+
+.modal.show .modal-content {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+}
+
+/* Remove slideDown animation as it conflicts with our positioning */
+@keyframes slideDown {
+    from {
+        transform: translate(-50%, -50%) scale(0.95);
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+}
+
 /* Settings number input improvements */
 .settings-number-input {
     padding: 8px 12px;

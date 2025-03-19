@@ -641,8 +641,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const macroUnit3 = {
                 name: 'AP Macro Unit 3 Test',
                 filename: 'presets/apmacrounit3.csv',
-                description: 'MPC and MPS'
+                description: 'Unit 3 Full Test Prep'
             };
+
+            const macroUnit4 = {
+                name: 'AP Macro Unit 4 Test',
+                filename: 'presets/apmacrounit4.csv',
+                description: 'Unit 4 Full Test Prep'
+            };
+
 
             const bizunit4_1 = {
                 name: 'IB Business unit 4.1',
@@ -743,6 +750,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const economics = subjectCategories.find(cat => cat.id === 'economics');
             if (economics) {
                 economics.presets.push(macroUnit3);
+                economics.presets.push(macroUnit4);
             }
 
             const ib_business = subjectCategories.find(cat => cat.id === 'ib-business' );
@@ -1124,18 +1132,34 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Settings functions
+    // Update the openSettings function
     function openSettings() {
         if (elements.settingsModal) {
+            // Position everything correctly first
             elements.settingsModal.style.display = 'block';
+            document.body.classList.add('modal-open');
+            
+            // Force a browser reflow to ensure display:block is processed
+            void elements.settingsModal.offsetWidth;
+            
+            // Then show with animation
+            elements.settingsModal.classList.add('show');
         }
     }
 
+    // Update the closeSettings function
     function closeSettings() {
         if (elements.settingsModal) {
-            elements.settingsModal.style.display = 'none';
+            // Hide with animation
+            elements.settingsModal.classList.remove('show');
+            
+            // Remove from DOM flow after animation completes
+            setTimeout(() => {
+                elements.settingsModal.style.display = 'none';
+                document.body.classList.remove('modal-open');
+            }, 300);
         }
     }
-
     function toggleDarkMode() {
         state.isDarkMode = elements.darkModeToggle.checked;
         document.body.classList.toggle('dark-mode', state.isDarkMode);
