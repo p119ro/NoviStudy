@@ -36,6 +36,48 @@
             document.addEventListener("DOMContentLoaded", initialize);
         }
     });
+
+        /**
+     * Send verification email using Netlify Function
+     * @param {Object} params - Email parameters
+     * @param {string} params.to - Recipient email
+     * @param {string} params.name - Recipient name
+     * @param {string} params.code - Verification code
+     * @param {function} callback - Callback function(success, errorMsg)
+     */
+    function sendVerificationEmailViaNetlify(params, callback) {
+        console.log("Sending verification email via Netlify Function");
+        
+        fetch('/.netlify/functions/send-verification', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            email: params.to,
+            name: params.name,
+            code: params.code
+        })
+        })
+        .then(response => {
+        if (!response.ok) {
+            throw new Error(`Server responded with ${response.status}`);
+        }
+        return response.json();
+        })
+        .then(data => {
+        console.log("Email function response:", data);
+        if (data.success) {
+            callback(true);
+        } else {
+            callback(false, data.message || "Unknown error");
+        }
+        })
+        .catch(error => {
+        console.error("Error calling email function:", error);
+        callback(false, error.message);
+        });
+    }
     
     /**
      * Initialize Auth System
@@ -377,7 +419,14 @@
         
         document.getElementById("qs-skip-verification").addEventListener("click", (e) => {
             e.preventDefault();
-            hideVerificationForm();
+            
+            // Prevent skipping unless this is an admin account
+            if (isAdmin()) {
+                hideVerificationForm();
+                console.log("Admin override: Verification skipped");
+            } else {
+                showError("verification", "Email verification is required to use this application.");
+            }
         });
         
         // Password reset links
@@ -888,26 +937,51 @@
             saveUsers();
             localStorage.setItem('quickstudy_current_user', JSON.stringify(currentUser));
             
-            // Send verification email if EmailService is available
-            if (window.EmailService && typeof window.EmailService.sendVerificationEmail === 'function') {
-                window.EmailService.sendVerificationEmail({
-                    to: currentUser.email,
-                    name: currentUser.displayName || '',
-                    code: verificationCode
-                }, function(success, error) {
-                    if (success) {
-                        console.log("Verification email sent successfully");
+            // First try Netlify function
+            sendVerificationEmailViaNetlify({
+                to: currentUser.email,
+                name: currentUser.displayName || '',
+                code: verificationCode
+            }, function(success, error) {
+                if (success) {
+                    console.log("Verification email sent successfully via Netlify function");
+                    showSuccess("verification", "Verification code has been sent to your email");
+                } else {
+                    console.error("Error sending via Netlify function, falling back to EmailService:", error);
+                    
+                    // Fall back to EmailService if available
+                    if (window.EmailService && typeof window.EmailService.sendVerificationEmail === 'function') {
+                        window.EmailService.sendVerificationEmail({
+                            to: currentUser.email,
+                            name: currentUser.displayName || '',
+                            code: verificationCode
+                        }, function(success, error) {
+                            if (success) {
+                                console.log("Verification email sent successfully via EmailService");
+                                showSuccess("verification", "Verification code has been sent to your email");
+                            } else {
+                                console.error("All email services failed:", error);
+                                
+                                // Only show code to admin for testing
+                                if (isAdmin()) {
+                                    console.log("Admin testing - verification code:", verificationCode);
+                                    showError("verification", "Email service failed (admin mode). See console for code.");
+                                } else {
+                                    showError("verification", "Unable to send verification email. Please try again later.");
+                                }
+                            }
+                        });
                     } else {
-                        console.error("Error sending verification email:", error);
-                        
-                        // Show fallback message if email sending fails
-                        alert(`Your verification code is: ${verificationCode}\nPlease note: We could not send the email. Please try again.`);
+                        // Only show code to admin for testing if all methods fail
+                        if (isAdmin()) {
+                            console.log("Admin testing - verification code:", verificationCode);
+                            showError("verification", "Email services unavailable (admin mode). See console for code.");
+                        } else {
+                            showError("verification", "Email verification service is unavailable. Please try again later.");
+                        }
                     }
-                });
-            } else {
-                // Fallback if EmailService is not available
-                alert(`Your verification code is: ${verificationCode}`);
-            }
+                }
+            });
         }
     }
     
@@ -915,8 +989,28 @@
      * Resend verification code
      */
     function resendVerificationCode() {
+        if (!currentUser) return;
+        
+        // Clear any previous success/error messages
+        clearErrors();
+        
+        // Show loading state
+        const resendLink = document.getElementById("qs-resend-code");
+        if (resendLink) {
+            resendLink.textContent = "Sending...";
+            resendLink.style.pointerEvents = "none";
+        }
+        
+        // Generate and send the code
         generateAndSendVerificationCode();
-        showSuccess("verification", "Verification code has been resent to your email");
+        
+        // Reset the button after delay
+        setTimeout(() => {
+            if (resendLink) {
+                resendLink.textContent = "Resend Code";
+                resendLink.style.pointerEvents = "auto";
+            }
+        }, 3000);
     }
     
     /**
@@ -1009,6 +1103,9 @@
     /**
      * Handle signup form submission
      */
+   /**
+ * Handle signup form submission
+ */
     function handleSignup() {
         const name = document.getElementById("qs-signup-name").value;
         const email = document.getElementById("qs-signup-email").value;
@@ -1065,44 +1162,90 @@
         currentUser = { ...newUser, _isAdmin: false };
         localStorage.setItem('quickstudy_current_user', JSON.stringify(currentUser));
         
-        // Send verification email if EmailService is available
-        if (window.EmailService && typeof window.EmailService.sendVerificationEmail === 'function') {
-            window.EmailService.sendVerificationEmail({
-                to: email,
-                name: name,
-                code: verificationCode
-            }, function(success, error) {
-                if (success) {
-                    console.log("Verification email sent successfully");
-                } else {
-                    console.error("Error sending verification email:", error);
-                    
-                    // Show fallback message if email sending fails
-                    alert(`Your verification code is: ${verificationCode}\nPlease note: We could not send the email. Please try again.`);
-                }
-                
-                // Continue with account creation process
-                completeSignup();
-            });
-        } else {
-            // Fallback if EmailService is not available
-            alert(`Your verification code is: ${verificationCode}`);
-            completeSignup();
-        }
+        // Clear previous errors
+        clearErrors();
         
+        // Send verification email using Netlify Function
+        sendVerificationEmailViaNetlify({
+            to: email,
+            name: name,
+            code: verificationCode
+        }, function(success, error) {
+            if (success) {
+                console.log("Verification email sent successfully via Netlify function");
+                
+                // Complete signup first, then show success message with slight delay
+                completeSignup();
+                setTimeout(() => {
+                    showSuccess("verification", "Verification code has been sent to your email");
+                }, 300);
+            } else {
+                console.error("Error sending via Netlify function, trying EmailService:", error);
+                
+                // Try EmailService if available (as fallback)
+                if (window.EmailService && typeof window.EmailService.sendVerificationEmail === 'function') {
+                    window.EmailService.sendVerificationEmail({
+                        to: email,
+                        name: name,
+                        code: verificationCode
+                    }, function(emailServiceSuccess, emailServiceError) {
+                        if (emailServiceSuccess) {
+                            console.log("Verification email sent successfully via EmailService");
+                            
+                            // Complete signup first, then show success message with slight delay
+                            completeSignup();
+                            setTimeout(() => {
+                                showSuccess("verification", "Verification code has been sent to your email");
+                            }, 300);
+                        } else {
+                            console.error("All email services failed:", emailServiceError);
+                            
+                            // Complete signup regardless of email failure
+                            completeSignup();
+                            
+                            // Show appropriate error message
+                            setTimeout(() => {
+                                // Only show code to admin for testing
+                                if (isAdmin()) {
+                                    console.log("Admin testing - verification code:", verificationCode);
+                                    showError("verification", "Email services failed (admin mode). See console for code.");
+                                } else {
+                                    showError("verification", "We couldn't send a verification email. Please try the 'Resend Code' option.");
+                                }
+                            }, 300);
+                        }
+                    });
+                } else {
+                    // Complete signup regardless of email service availability
+                    completeSignup();
+                    
+                    // Show appropriate error after form is visible
+                    setTimeout(() => {
+                        // Only show code to admin for testing
+                        if (isAdmin()) {
+                            console.log("Admin testing - verification code:", verificationCode);
+                            showError("verification", "Email services unavailable (admin mode). See console for code.");
+                        } else {
+                            showError("verification", "Email verification service is currently unavailable. Please try again later.");
+                        }
+                    }, 300);
+                }
+            }
+        });
+        
+        // Helper function to complete the signup process
         function completeSignup() {
             // Update UI
             hideLoginScreen();
             showUserInfo(currentUser);
             hideAdminUI();
-            clearErrors();
             
             // Show verification form
             showVerificationForm();
             
             console.log("New user created:", newUser.email);
             
-            // Reset button
+            // Reset button state
             signupButton.disabled = false;
             signupButton.innerHTML = "Create Account";
         }

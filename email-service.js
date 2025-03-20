@@ -29,31 +29,51 @@
     /**
      * Initialize Email Service with environment variables
      */
+    // email-service.js - update the initialize function
     function initialize() {
         if (!window.ENV) {
             console.error("Email service cannot be initialized: Environment variables not loaded");
-            return;
+            return false;
         }
         
-        emailConfig = {
-            initialized: true,
-            host: 'smtp.gmail.com',
-            username: window.ENV.EMAIL_ADDRESS,
-            password: window.ENV.EMAIL_APP_PASSWORD,
-            port: window.ENV.EMAIL_PORT || 587,
-            secure: false
-        };
+        if (!window.ENV.EMAIL_ADDRESS || !window.ENV.EMAIL_APP_PASSWORD) {
+            console.error("Email service cannot be initialized: Missing email credentials in environment variables");
+            return false;
+        }
         
-        // Initialize SMTP.js
-        Email.init({
-            host: emailConfig.host,
-            username: emailConfig.username,
-            password: emailConfig.password,
-            port: emailConfig.port,
-            secure: emailConfig.secure
-        });
+        // Check if SMTP.js is loaded
+        if (typeof Email === 'undefined') {
+            console.error("Email service cannot be initialized: SMTP.js library not loaded");
+            return false;
+        }
         
-        console.log("Email service initialized");
+        try {
+            emailConfig = {
+                initialized: true,
+                host: 'smtp.gmail.com',
+                username: window.ENV.EMAIL_ADDRESS,
+                password: window.ENV.EMAIL_APP_PASSWORD,
+                port: window.ENV.EMAIL_PORT || 587,
+                secure: false
+            };
+            
+            // Initialize SMTP.js
+            Email.init({
+                host: emailConfig.host,
+                username: emailConfig.username,
+                password: emailConfig.password,
+                port: emailConfig.port,
+                secure: emailConfig.secure
+            });
+            
+            console.log("Email service initialized successfully");
+            return true;
+        } catch (error) {
+            console.error("Failed to initialize email service:", error);
+            emailConfig.initialized = false;
+            emailConfig.initError = error.message;
+            return false;
+        }
     }
     
     /**
