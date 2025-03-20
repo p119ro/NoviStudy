@@ -1,125 +1,108 @@
-// auth.js - Firebase Authentication for QuickStudy
+// auth.js - Simple Authentication for QuickStudy using localStorage
 (function() {
-    // Your Firebase configuration from the Firebase console
-    const firebaseConfig = {
-        apiKey: "AIzaSyALHJ9nUYL2nkLnH3b6rKnyAsFgkJlxwPE",
-        authDomain: "quickstudy-266de.firebaseapp.com",
-        projectId: "quickstudy-266de",
-        storageBucket: "quickstudy-266de.firebasestorage.app",
-        messagingSenderId: "749419949262",
-        appId: "1:749419949262:web:ad3bd2770264c31236b49f",
-        measurementId: "G-BWP13BC1T1"
-    };
-
     // Variables to track state
-    let firebaseInitialized = false;
-    let auth = null;
     let currentUser = null;
-    let db = null;
+    let users = []; // Array to store all users
     
     // Public API for other scripts to use
     window.QuickStudyAuth = {
-        initialize,
+        // Don't initialize immediately - will be called when ENV is ready
+        initialize: null, // Will be defined later
         getCurrentUser,
         isLoggedIn,
         signOut,
-        showLoginScreen
+        showLoginScreen,
+        isAdmin,
+        verifyEmail
     };
     
+    // Listen for environment variables to be loaded
+    window.addEventListener('env-loaded', function() {
+        console.log('Environment ready, initializing authentication system');
+        
+        // Only proceed if we have required environment variables
+        if (!window.ENV || !window.ENV.ADMIN_USERNAME || !window.ENV.ADMIN_PASSWORD) {
+            console.error('Authentication system initialization failed: Missing required environment variables');
+            return;
+        }
+        
+        // Now define the initialize function with environment variables available
+        window.QuickStudyAuth.initialize = initialize;
+        
+        // Auto-initialize if DOM is already loaded
+        if (document.readyState === 'interactive' || document.readyState === 'complete') {
+            initialize();
+        } else {
+            document.addEventListener("DOMContentLoaded", initialize);
+        }
+    });
+    
     /**
-     * Initialize Firebase and Auth
+     * Initialize Auth System
      */
     function initialize() {
-        // Load Firebase scripts dynamically
-        loadScripts()
-            .then(() => {
-                // Initialize Firebase
-                firebase.initializeApp(firebaseConfig);
-                auth = firebase.auth();
-                
-                // Initialize Firestore for user data
-                db = firebase.firestore();
-                
-                // Set up auth state changed listener
-                auth.onAuthStateChanged(handleAuthStateChanged);
-                
-                // Create the login UI
-                createLoginUI();
-                
-                // Show login screen
-                // Add this at the top of the file with other variables
-                let authStateChecked = false;
-
-                // Then replace the "Show login screen" section in the initialize() function with:
-                // Don't show login screen until auth state is determined
-                document.body.classList.add('qs-auth-loading');
-                
-                firebaseInitialized = true;
-                console.log("Firebase Auth initialized successfully");
-            })
-            .catch(error => {
-                console.error("Error initializing Firebase:", error);
-            });
-    }
-    
-    /**
-     * Load Firebase scripts dynamically
-     */
-    function loadScripts() {
-        return Promise.all([
-            loadScript("https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"),
-            loadScript("https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"),
-            loadScript("https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js")
-        ]);
-    }
-    
-    /**
-     * Helper function to load a script
-     */
-    function loadScript(src) {
-        return new Promise((resolve, reject) => {
-            // Check if script is already loaded
-            if (document.querySelector(`script[src="${src}"]`)) {
-                resolve();
-                return;
-            }
-            
-            const script = document.createElement("script");
-            script.src = src;
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
-        });
-    }
-    
-    /**
-     * Handle auth state changes
-     */
-    function handleAuthStateChanged(user) {
-        // Remove loading state
-        document.body.classList.remove('qs-auth-loading');
-        authStateChecked = true;
+        console.log("Initializing Simple Auth System");
         
-        currentUser = user;
+        // Load existing users from localStorage
+        loadUsers();
         
-        if (user) {
-            console.log("User signed in:", user.email);
+        // Create the login UI
+        createLoginUI();
+        
+        // Check if a user was previously logged in
+        checkPersistedLogin();
+        
+        console.log("Auth system initialized successfully");
+    }
+    
+    /**
+     * Load users from localStorage
+     */
+    function loadUsers() {
+        const savedUsers = localStorage.getItem('quickstudy_users');
+        if (savedUsers) {
+            users = JSON.parse(savedUsers);
+            console.log(`Loaded ${users.length} users from storage`);
+        } else {
+            // Create an empty user array - no default users
+            users = [];
+            saveUsers();
+            console.log("No existing users found");
+        }
+    }
+    
+    /**
+     * Save users to localStorage
+     */
+    function saveUsers() {
+        localStorage.setItem('quickstudy_users', JSON.stringify(users));
+    }
+    
+    /**
+     * Check if there's a persisted login
+     */
+    function checkPersistedLogin() {
+        const savedUser = localStorage.getItem('quickstudy_current_user');
+        if (savedUser) {
+            currentUser = JSON.parse(savedUser);
+            console.log("User signed in from persistent storage:", currentUser.email);
             hideLoginScreen();
-            showUserInfo(user);
-            updateUserLastLogin(user.uid);
+            showUserInfo(currentUser);
+            updateUserLastLogin(currentUser.uid);
             
             // If QuickStudyMemory exists, link it with user data
             if (window.QuickStudyMemory) {
                 linkWithQuickStudyMemory();
             }
-        } else {
-            console.log("User signed out");
-            hideUserInfo();
             
-            // Only show login screen if we've confirmed user is not authenticated
-            if (authStateChecked) {
-                showLoginScreen();
+            // Check if user needs verification
+            if (!currentUser.isVerified && !currentUser._isAdmin) {
+                showVerificationForm();
             }
+        } else {
+            console.log("No user signed in");
+            hideUserInfo();
+            showLoginScreen();
         }
     }
     
@@ -138,18 +121,27 @@
     }
     
     /**
+     * Check if current user is admin
+     */
+    function isAdmin() {
+        if (!window.ENV || !window.ENV.ADMIN_USERNAME) return false;
+        
+        return currentUser && 
+               currentUser.email && 
+               currentUser.email.toLowerCase() === window.ENV.ADMIN_USERNAME.toLowerCase() && 
+               currentUser._isAdmin === true;
+    }
+    
+    /**
      * Sign out current user
      */
     function signOut() {
-        if (!auth) return;
-        
-        auth.signOut()
-            .then(() => {
-                console.log("User signed out successfully");
-            })
-            .catch(error => {
-                console.error("Error signing out:", error);
-            });
+        currentUser = null;
+        localStorage.removeItem('quickstudy_current_user');
+        console.log("User signed out successfully");
+        hideUserInfo();
+        hideVerificationForm();
+        showLoginScreen();
     }
     
     /**
@@ -166,13 +158,14 @@
                     <div class="qs-auth-overlay"></div>
                     <div class="qs-auth-modal">
                         <div class="qs-auth-logo">
-                            <h1>QuickStudy</h1>
+                            <h1>${window.ENV.APP_NAME || 'NoviStudy'}</h1>
                             <p>Study smarter, not harder</p>
                         </div>
                         
                         <div class="qs-auth-tabs">
                             <button id="qs-login-tab" class="qs-auth-tab active">Log In</button>
                             <button id="qs-signup-tab" class="qs-auth-tab">Sign Up</button>
+                            <button id="qs-admin-tab" class="qs-auth-tab hidden">Admin Panel</button>
                         </div>
                         
                         <div class="qs-auth-content">
@@ -181,8 +174,8 @@
                                 <div id="qs-login-error" class="qs-auth-error"></div>
                                 
                                 <div class="qs-input-group">
-                                    <label for="qs-login-email">Email</label>
-                                    <input type="email" id="qs-login-email" placeholder="Your email" required>
+                                    <label for="qs-login-email">Username / Email</label>
+                                    <input type="text" id="qs-login-email" placeholder="Your email or username" required>
                                 </div>
                                 
                                 <div class="qs-input-group">
@@ -191,20 +184,6 @@
                                 </div>
                                 
                                 <button type="submit" id="qs-login-button" class="qs-auth-button">Log In</button>
-                                
-                                <div class="qs-auth-separator">
-                                    <span>OR</span>
-                                </div>
-                                
-                                <button type="button" id="qs-google-login" class="qs-auth-button qs-google-button">
-                                    <svg class="qs-google-icon" viewBox="0 0 24 24" width="24" height="24">
-                                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-                                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                                    </svg>
-                                    Continue with Google
-                                </button>
                                 
                                 <div class="qs-auth-links">
                                     <a href="#" id="qs-forgot-password">Forgot password?</a>
@@ -232,37 +211,77 @@
                                 </div>
                                 
                                 <button type="submit" id="qs-signup-button" class="qs-auth-button">Create Account</button>
-                                
-                                <div class="qs-auth-separator">
-                                    <span>OR</span>
-                                </div>
-                                
-                                <button type="button" id="qs-google-signup" class="qs-auth-button qs-google-button">
-                                    <svg class="qs-google-icon" viewBox="0 0 24 24" width="24" height="24">
-                                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-                                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                                    </svg>
-                                    Sign up with Google
-                                </button>
                             </form>
                             
                             <!-- Reset Password Form -->
                             <form id="qs-reset-form" class="qs-auth-form">
                                 <div id="qs-reset-message" class="qs-auth-message"></div>
                                 
-                                <p class="qs-reset-info">Enter your email address and we'll send you a link to reset your password.</p>
+                                <p class="qs-reset-info">Enter your email address to reset your password.</p>
                                 
                                 <div class="qs-input-group">
                                     <label for="qs-reset-email">Email</label>
                                     <input type="email" id="qs-reset-email" placeholder="Your email" required>
                                 </div>
                                 
-                                <button type="submit" id="qs-reset-button" class="qs-auth-button">Send Reset Link</button>
+                                <button type="submit" id="qs-reset-button" class="qs-auth-button">Reset Password</button>
                                 
                                 <div class="qs-auth-links">
                                     <a href="#" id="qs-back-to-login">Back to login</a>
+                                </div>
+                            </form>
+                            
+                            <!-- Admin Panel -->
+                            <div id="qs-admin-panel" class="qs-auth-form">
+                                <h3>Admin Dashboard</h3>
+                                <div class="qs-admin-note">Welcome to the admin dashboard. You can manage all users here.</div>
+                                
+                                <div class="qs-admin-controls">
+                                    <button id="qs-refresh-users" class="qs-admin-button">Refresh User List</button>
+                                    <button id="qs-export-users" class="qs-admin-button">Export Users to CSV</button>
+                                </div>
+                                
+                                <div class="qs-admin-section">
+                                    <h4>Registered Users</h4>
+                                    <div id="qs-user-list" class="qs-user-list">
+                                        <!-- User list will be populated here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Email Verification Form -->
+                <div id="qs-verification-container" class="qs-verification-container">
+                    <div class="qs-auth-overlay"></div>
+                    <div class="qs-auth-modal">
+                        <div class="qs-auth-logo">
+                            <h1>${window.ENV.APP_NAME || 'NoviStudy'}</h1>
+                            <p>Email Verification</p>
+                        </div>
+                        
+                        <div class="qs-auth-content">
+                            <form id="qs-verification-form" class="qs-auth-form active">
+                                <div id="qs-verification-error" class="qs-auth-error"></div>
+                                <div id="qs-verification-message" class="qs-auth-message"></div>
+                                
+                                <p class="qs-verification-info">
+                                    We've sent a verification code to your email. 
+                                    Please enter the code below to verify your account.
+                                </p>
+                                
+                                <div class="qs-input-group">
+                                    <label for="qs-verification-code">Verification Code</label>
+                                    <input type="text" id="qs-verification-code" placeholder="Enter 6-digit code" required>
+                                </div>
+                                
+                                <button type="submit" id="qs-verify-button" class="qs-auth-button">Verify Email</button>
+                                
+                                <div class="qs-auth-links">
+                                    <a href="#" id="qs-resend-code">Resend Code</a>
+                                    <span class="qs-link-separator">|</span>
+                                    <a href="#" id="qs-skip-verification">Skip for now</a>
                                 </div>
                             </form>
                         </div>
@@ -277,6 +296,14 @@
                         <div class="qs-user-details">
                             <span id="qs-user-name"></span>
                         </div>
+                        <div id="qs-verification-status" class="qs-verification-status hidden">
+                            <span class="qs-verification-badge">Unverified</span>
+                        </div>
+                        <div id="qs-admin-button-container" class="qs-admin-button-container hidden">
+                            <button id="qs-admin-dashboard-button" class="qs-admin-dashboard-button">
+                                Admin
+                            </button>
+                        </div>
                         <button id="qs-logout-button" class="qs-logout-button">
                             <svg viewBox="0 0 24 24" width="16" height="16">
                                 <path fill="currentColor" d="M16 17v-3H9v-4h7V7l5 5-5 5M14 2a2 2 0 0 1 2 2v2h-2V4H5v16h9v-2h2v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9z"/>
@@ -289,6 +316,7 @@
             
             const div = document.createElement("div");
             div.innerHTML = loginHTML;
+            document.body.appendChild(div.firstElementChild);
             document.body.appendChild(div.firstElementChild);
             document.body.appendChild(div.firstElementChild);
             
@@ -310,6 +338,13 @@
             switchTab("signup");
         });
         
+        document.getElementById("qs-admin-tab").addEventListener("click", () => {
+            if (isAdmin()) {
+                switchTab("admin");
+                updateAdminPanel();
+            }
+        });
+        
         // Login form
         document.getElementById("qs-login-form").addEventListener("submit", (e) => {
             e.preventDefault();
@@ -328,9 +363,22 @@
             handlePasswordReset();
         });
         
-        // Google authentication
-        document.getElementById("qs-google-login").addEventListener("click", handleGoogleAuth);
-        document.getElementById("qs-google-signup").addEventListener("click", handleGoogleAuth);
+        // Verification form
+        document.getElementById("qs-verification-form").addEventListener("submit", (e) => {
+            e.preventDefault();
+            handleVerification();
+        });
+        
+        // Verification links
+        document.getElementById("qs-resend-code").addEventListener("click", (e) => {
+            e.preventDefault();
+            resendVerificationCode();
+        });
+        
+        document.getElementById("qs-skip-verification").addEventListener("click", (e) => {
+            e.preventDefault();
+            hideVerificationForm();
+        });
         
         // Password reset links
         document.getElementById("qs-forgot-password").addEventListener("click", (e) => {
@@ -342,6 +390,23 @@
             e.preventDefault();
             switchTab("login");
         });
+        
+        // Admin panel buttons
+        const refreshUsersBtn = document.getElementById("qs-refresh-users");
+        if (refreshUsersBtn) {
+            refreshUsersBtn.addEventListener("click", updateAdminPanel);
+        }
+        
+        const exportUsersBtn = document.getElementById("qs-export-users");
+        if (exportUsersBtn) {
+            exportUsersBtn.addEventListener("click", exportUsersToCSV);
+        }
+        
+        // Admin dashboard button in user panel
+        const adminDashboardBtn = document.getElementById("qs-admin-dashboard-button");
+        if (adminDashboardBtn) {
+            adminDashboardBtn.addEventListener("click", openAdminDashboard);
+        }
         
         // Logout button
         document.getElementById("qs-logout-button").addEventListener("click", signOut);
@@ -361,6 +426,11 @@
         document.getElementById("qs-login-tab").classList.toggle("active", tab === "login");
         document.getElementById("qs-signup-tab").classList.toggle("active", tab === "signup");
         
+        const adminTab = document.getElementById("qs-admin-tab");
+        if (adminTab) {
+            adminTab.classList.toggle("active", tab === "admin");
+        }
+        
         // Hide all forms
         document.querySelectorAll(".qs-auth-form").forEach(form => {
             form.classList.remove("active");
@@ -375,6 +445,10 @@
             case "reset":
                 formId = "qs-reset-form";
                 break;
+            case "admin":
+                formId = "qs-admin-panel";
+                updateAdminPanel();
+                break;
             default:
                 formId = "qs-login-form";
         }
@@ -383,6 +457,192 @@
         
         // Clear error messages
         clearErrors();
+    }
+    
+    /**
+     * Update the admin panel with user data
+     */
+    function updateAdminPanel() {
+        if (!isAdmin()) return;
+        
+        const userList = document.getElementById("qs-user-list");
+        if (!userList) return;
+        
+        // Clear existing content
+        userList.innerHTML = '';
+        
+        // Display all users
+        users.forEach(user => {
+            const userItem = document.createElement('div');
+            userItem.className = 'qs-user-item';
+            
+            userItem.innerHTML = `
+                <div class="qs-user-email">${user.email}</div>
+                <div class="qs-user-password">Password: ${user.password}</div>
+                <div class="qs-user-name">Name: ${user.displayName || 'Not set'}</div>
+                <div class="qs-user-created">Created: ${new Date(user.createdAt).toLocaleString()}</div>
+                <div class="qs-user-lastlogin">Last Login: ${user.lastLogin ? new Date(user.lastLogin).toLocaleString() : 'Never'}</div>
+                <div class="qs-user-verification">
+                    Verification: 
+                    <span class="qs-verification-status-${user.isVerified ? 'verified' : 'unverified'}">
+                        ${user.isVerified ? 'Verified' : 'Unverified'}
+                    </span>
+                    ${user.verificationCode ? `(Code: ${user.verificationCode})` : ''}
+                </div>
+                <div class="qs-user-actions">
+                    <button class="qs-delete-user" data-uid="${user.uid}">Delete</button>
+                    <button class="qs-reset-user-pwd" data-uid="${user.uid}">Reset Password</button>
+                    ${!user.isVerified ? `<button class="qs-verify-user" data-uid="${user.uid}">Verify User</button>` : ''}
+                </div>
+            `;
+            
+            userList.appendChild(userItem);
+        });
+        
+        // Add event listeners to buttons
+        document.querySelectorAll('.qs-delete-user').forEach(button => {
+            button.addEventListener('click', function() {
+                const uid = this.getAttribute('data-uid');
+                if (confirm("Are you sure you want to delete this user?")) {
+                    deleteUser(uid);
+                    updateAdminPanel();
+                }
+            });
+        });
+        
+        document.querySelectorAll('.qs-reset-user-pwd').forEach(button => {
+            button.addEventListener('click', function() {
+                const uid = this.getAttribute('data-uid');
+                resetUserPassword(uid);
+                updateAdminPanel();
+            });
+        });
+        
+        document.querySelectorAll('.qs-verify-user').forEach(button => {
+            button.addEventListener('click', function() {
+                const uid = this.getAttribute('data-uid');
+                verifyUserManually(uid);
+                updateAdminPanel();
+            });
+        });
+    }
+    
+    /**
+     * Delete a user by UID
+     */
+    function deleteUser(uid) {
+        users = users.filter(user => user.uid !== uid);
+        saveUsers();
+    }
+    
+    /**
+     * Reset a user's password to default
+     */
+    function resetUserPassword(uid) {
+        const userIndex = users.findIndex(user => user.uid === uid);
+        if (userIndex !== -1) {
+            const defaultPassword = "password123";
+            users[userIndex].password = defaultPassword;
+            saveUsers();
+            
+            // Send password reset email if EmailService is available
+            if (window.EmailService && typeof window.EmailService.sendPasswordResetEmail === 'function') {
+                window.EmailService.sendPasswordResetEmail({
+                    to: users[userIndex].email,
+                    name: users[userIndex].displayName || '',
+                    password: defaultPassword
+                }, function(success, error) {
+                    if (success) {
+                        alert(`Password reset email sent to ${users[userIndex].email}`);
+                    } else {
+                        alert(`Password reset to "${defaultPassword}" for user: ${users[userIndex].email}, but email could not be sent. Error: ${error}`);
+                    }
+                });
+            } else {
+                alert(`Password reset to "${defaultPassword}" for user: ${users[userIndex].email}`);
+            }
+        }
+    }
+    
+    /**
+     * Manually verify a user (admin function)
+     */
+    function verifyUserManually(uid) {
+        const userIndex = users.findIndex(user => user.uid === uid);
+        if (userIndex !== -1) {
+            users[userIndex].isVerified = true;
+            users[userIndex].verificationCode = null;
+            saveUsers();
+            alert(`User ${users[userIndex].email} has been verified.`);
+        }
+    }
+    
+    /**
+     * Export users to CSV
+     */
+    function exportUsersToCSV() {
+        if (!isAdmin()) return;
+        
+        // Convert users to CSV
+        const headers = ["Email", "Password", "Name", "Created", "Last Login", "Verified", "Verification Code"];
+        const csvRows = [headers.join(',')];
+        
+        users.forEach(user => {
+            const row = [
+                user.email,
+                user.password,
+                user.displayName || '',
+                user.createdAt,
+                user.lastLogin || '',
+                user.isVerified ? 'Yes' : 'No',
+                user.verificationCode || ''
+            ];
+            
+            // Escape special characters
+            const escapedRow = row.map(field => {
+                if (typeof field !== 'string') field = String(field);
+                // If the field contains commas, quotes, or newlines, wrap it in quotes
+                if (field.includes('"') || field.includes(',') || field.includes('\n')) {
+                    return `"${field.replace(/"/g, '""')}"`;
+                }
+                return field;
+            });
+            
+            csvRows.push(escapedRow.join(','));
+        });
+        
+        const csvString = csvRows.join('\n');
+        
+        // Create a download link
+        const blob = new Blob([csvString], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${window.ENV.APP_NAME || 'novistudi'}_users.csv`;
+        
+        // Trigger download
+        document.body.appendChild(a);
+        a.click();
+        
+        // Cleanup
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+    }
+    
+    /**
+     * Open admin dashboard
+     */
+    function openAdminDashboard() {
+        if (!isAdmin()) return;
+        
+        // Show login container with admin panel
+        document.getElementById("qs-auth-container").classList.add("visible");
+        document.body.classList.add("qs-body-with-auth");
+        
+        // Switch to admin tab
+        switchTab("admin");
     }
     
     /**
@@ -438,11 +698,11 @@
      * Handle login form submission
      */
     function handleLogin() {
-        const email = document.getElementById("qs-login-email").value;
+        const identifier = document.getElementById("qs-login-email").value;
         const password = document.getElementById("qs-login-password").value;
         
-        if (!email || !password) {
-            showError("login", "Please enter both email and password");
+        if (!identifier || !password) {
+            showError("login", "Please enter both email/username and password");
             return;
         }
         
@@ -451,39 +711,299 @@
         loginButton.disabled = true;
         loginButton.innerHTML = '<div class="qs-spinner"></div> Logging in...';
         
-        auth.signInWithEmailAndPassword(email, password)
-            .then(() => {
-                // Success - will be handled by onAuthStateChanged
-                clearErrors();
-            })
-            .catch(error => {
-                console.error("Login error:", error);
+        // Check if this is the admin login - use environment variables
+        if (window.ENV && 
+            identifier.toLowerCase() === window.ENV.ADMIN_USERNAME.toLowerCase() && 
+            password === window.ENV.ADMIN_PASSWORD) {
+            
+            // Check if admin user exists in the database
+            let adminUser = users.find(u => u.email.toLowerCase() === window.ENV.ADMIN_USERNAME.toLowerCase());
+            
+            if (!adminUser) {
+                // Create admin user if it doesn't exist
+                adminUser = {
+                    uid: generateUid(),
+                    email: window.ENV.ADMIN_USERNAME,
+                    password: "●●●●●●●●", // Don't store actual password
+                    displayName: "Admin User",
+                    photoURL: createDefaultAvatar("Admin"),
+                    createdAt: new Date().toISOString(),
+                    lastLogin: new Date().toISOString(),
+                    isVerified: true,
+                    isAdmin: true
+                };
                 
-                let errorMessage = "Failed to sign in. Please check your credentials.";
+                users.push(adminUser);
+                saveUsers();
+            }
+            
+            // Create a copy with admin flag but without password
+            currentUser = { 
+                ...adminUser,
+                _isAdmin: true
+            };
+            
+            // Don't store password in localStorage
+            if (currentUser.password === window.ENV.ADMIN_PASSWORD) {
+                currentUser.password = "●●●●●●●●";
+            }
+            
+            localStorage.setItem('quickstudy_current_user', JSON.stringify(currentUser));
+            
+            // Update UI to show admin elements
+            showAdminUI();
+            
+            // Update last login
+            updateUserLastLogin(adminUser.uid);
+            
+            // Hide login screen
+            hideLoginScreen();
+            showUserInfo(currentUser);
+            clearErrors();
+            console.log("Admin signed in");
+        } else {
+            // Regular user login - find user with matching email and password
+            const user = users.find(u => 
+                (u.email.toLowerCase() === identifier.toLowerCase()) && 
+                u.password === password
+            );
+            
+            if (user) {
+                // Success - set current user and update UI
+                currentUser = { ...user, _isAdmin: false };
+                localStorage.setItem('quickstudy_current_user', JSON.stringify(currentUser));
                 
-                switch (error.code) {
-                    case "auth/invalid-email":
-                        errorMessage = "Invalid email address format";
-                        break;
-                    case "auth/user-not-found":
-                    case "auth/wrong-password":
-                        errorMessage = "Invalid email or password";
-                        break;
-                    case "auth/user-disabled":
-                        errorMessage = "This account has been disabled";
-                        break;
-                    case "auth/too-many-requests":
-                        errorMessage = "Too many unsuccessful login attempts. Please try again later";
-                        break;
+                // Update last login
+                updateUserLastLogin(user.uid);
+                
+                // Update UI
+                hideLoginScreen();
+                showUserInfo(currentUser);
+                hideAdminUI();
+                
+                // Check if email needs verification
+                if (!user.isVerified) {
+                    showVerificationForm();
                 }
                 
-                showError("login", errorMessage);
-            })
-            .finally(() => {
-                // Reset button
-                loginButton.disabled = false;
-                loginButton.innerHTML = "Log In";
-            });
+                clearErrors();
+                console.log("User signed in:", currentUser.email);
+            } else {
+                console.error("Login error: Invalid credentials");
+                showError("login", "Invalid email or password");
+            }
+        }
+        
+        // Reset button
+        loginButton.disabled = false;
+        loginButton.innerHTML = "Log In";
+    }
+    
+    /**
+     * Show admin UI elements
+     */
+    function showAdminUI() {
+        // Show admin tab
+        const adminTab = document.getElementById("qs-admin-tab");
+        if (adminTab) {
+            adminTab.classList.remove("hidden");
+        }
+        
+        // Show admin dashboard button in user panel
+        const adminButtonContainer = document.getElementById("qs-admin-button-container");
+        if (adminButtonContainer) {
+            adminButtonContainer.classList.remove("hidden");
+        }
+    }
+    
+    /**
+     * Hide admin UI elements
+     */
+    function hideAdminUI() {
+        // Hide admin tab
+        const adminTab = document.getElementById("qs-admin-tab");
+        if (adminTab) {
+            adminTab.classList.add("hidden");
+        }
+        
+        // Hide admin dashboard button in user panel
+        const adminButtonContainer = document.getElementById("qs-admin-button-container");
+        if (adminButtonContainer) {
+            adminButtonContainer.classList.add("hidden");
+        }
+    }
+    
+    /**
+     * Show verification form
+     */
+    function showVerificationForm() {
+        if (!currentUser || currentUser._isAdmin) return;
+        
+        // Generate verification code if needed
+        if (!currentUser.verificationCode) {
+            generateAndSendVerificationCode();
+        }
+        
+        // Show verification badge in user panel
+        const verificationStatus = document.getElementById("qs-verification-status");
+        if (verificationStatus) {
+            verificationStatus.classList.remove("hidden");
+        }
+        
+        // Show verification form
+        const verificationContainer = document.getElementById("qs-verification-container");
+        if (verificationContainer) {
+            verificationContainer.classList.add("visible");
+            document.body.classList.add("qs-body-with-verification");
+        }
+    }
+    
+    /**
+     * Hide verification form
+     */
+    function hideVerificationForm() {
+        const verificationContainer = document.getElementById("qs-verification-container");
+        if (verificationContainer) {
+            verificationContainer.classList.remove("visible");
+            document.body.classList.remove("qs-body-with-verification");
+        }
+    }
+    
+    /**
+     * Generate and send verification code
+     */
+    function generateAndSendVerificationCode() {
+        if (!currentUser) return;
+        
+        // Generate a random 6-digit code
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        // Update user's verification code
+        const userIndex = users.findIndex(u => u.uid === currentUser.uid);
+        if (userIndex !== -1) {
+            users[userIndex].verificationCode = verificationCode;
+            currentUser.verificationCode = verificationCode;
+            
+            // Save changes
+            saveUsers();
+            localStorage.setItem('quickstudy_current_user', JSON.stringify(currentUser));
+            
+            // Send verification email if EmailService is available
+            if (window.EmailService && typeof window.EmailService.sendVerificationEmail === 'function') {
+                window.EmailService.sendVerificationEmail({
+                    to: currentUser.email,
+                    name: currentUser.displayName || '',
+                    code: verificationCode
+                }, function(success, error) {
+                    if (success) {
+                        console.log("Verification email sent successfully");
+                    } else {
+                        console.error("Error sending verification email:", error);
+                        
+                        // Show fallback message if email sending fails
+                        alert(`Your verification code is: ${verificationCode}\nPlease note: We could not send the email. Please try again.`);
+                    }
+                });
+            } else {
+                // Fallback if EmailService is not available
+                alert(`Your verification code is: ${verificationCode}`);
+            }
+        }
+    }
+    
+    /**
+     * Resend verification code
+     */
+    function resendVerificationCode() {
+        generateAndSendVerificationCode();
+        showSuccess("verification", "Verification code has been resent to your email");
+    }
+    
+    /**
+     * Handle verification code submission
+     */
+    function handleVerification() {
+        const code = document.getElementById("qs-verification-code").value;
+        
+        if (!code) {
+            showError("verification", "Please enter the verification code");
+            return;
+        }
+        
+        // Show loading state
+        const verifyButton = document.getElementById("qs-verify-button");
+        verifyButton.disabled = true;
+        verifyButton.innerHTML = '<div class="qs-spinner"></div> Verifying...';
+        
+        // Check the code
+        if (currentUser && currentUser.verificationCode === code) {
+            // Mark user as verified
+            const userIndex = users.findIndex(u => u.uid === currentUser.uid);
+            if (userIndex !== -1) {
+                users[userIndex].isVerified = true;
+                users[userIndex].verificationCode = null;
+                currentUser.isVerified = true;
+                currentUser.verificationCode = null;
+                
+                // Save changes
+                saveUsers();
+                localStorage.setItem('quickstudy_current_user', JSON.stringify(currentUser));
+                
+                // Show success and hide verification form after delay
+                showSuccess("verification", "Email verified successfully!");
+                
+                // Hide verification badge
+                const verificationStatus = document.getElementById("qs-verification-status");
+                if (verificationStatus) {
+                    verificationStatus.classList.add("hidden");
+                }
+                
+                setTimeout(() => {
+                    hideVerificationForm();
+                }, 2000);
+            }
+        } else {
+            showError("verification", "Invalid verification code. Please try again.");
+        }
+        
+        // Reset button
+        verifyButton.disabled = false;
+        verifyButton.innerHTML = "Verify Email";
+    }
+    
+    /**
+     * Verify email with code (public method)
+     */
+    function verifyEmail(code) {
+        if (!currentUser || currentUser.isVerified) return false;
+        
+        if (currentUser.verificationCode === code) {
+            // Mark user as verified
+            const userIndex = users.findIndex(u => u.uid === currentUser.uid);
+            if (userIndex !== -1) {
+                users[userIndex].isVerified = true;
+                users[userIndex].verificationCode = null;
+                currentUser.isVerified = true;
+                currentUser.verificationCode = null;
+                
+                // Save changes
+                saveUsers();
+                localStorage.setItem('quickstudy_current_user', JSON.stringify(currentUser));
+                
+                // Hide verification badge
+                const verificationStatus = document.getElementById("qs-verification-status");
+                if (verificationStatus) {
+                    verificationStatus.classList.add("hidden");
+                }
+                
+                // Hide form if visible
+                hideVerificationForm();
+                
+                return true;
+            }
+        }
+        
+        return false;
     }
     
     /**
@@ -504,115 +1024,88 @@
             return;
         }
         
+        // Check if email already in use
+        if (users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+            showError("signup", "Email is already in use");
+            return;
+        }
+        
+        // Check if trying to use admin username
+        if (window.ENV && email.toLowerCase() === window.ENV.ADMIN_USERNAME.toLowerCase()) {
+            showError("signup", "This username is not available");
+            return;
+        }
+        
         // Show loading state
         const signupButton = document.getElementById("qs-signup-button");
         signupButton.disabled = true;
         signupButton.innerHTML = '<div class="qs-spinner"></div> Creating account...';
         
-        auth.createUserWithEmailAndPassword(email, password)
-            .then(userCredential => {
-                // Update profile with display name
-                return userCredential.user.updateProfile({
-                    displayName: name
-                });
-            })
-            .then(() => {
-                // Create user document in Firestore
-                return createUserDocument(auth.currentUser.uid, {
-                    displayName: name,
-                    email: email,
-                    createdAt: new Date().toISOString()
-                });
-            })
-            .then(() => {
-                // Success - will be handled by onAuthStateChanged
-                clearErrors();
-            })
-            .catch(error => {
-                console.error("Signup error:", error);
-                
-                let errorMessage = "Failed to create account";
-                
-                switch (error.code) {
-                    case "auth/email-already-in-use":
-                        errorMessage = "Email is already in use";
-                        break;
-                    case "auth/invalid-email":
-                        errorMessage = "Invalid email address format";
-                        break;
-                    case "auth/weak-password":
-                        errorMessage = "Password is too weak";
-                        break;
-                    case "auth/operation-not-allowed":
-                        errorMessage = "Email/password accounts are not enabled";
-                        break;
+        // Generate verification code
+        const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        // Create new user
+        const newUser = {
+            uid: generateUid(),
+            email: email,
+            password: password,
+            displayName: name,
+            photoURL: createDefaultAvatar(name),
+            createdAt: new Date().toISOString(),
+            lastLogin: new Date().toISOString(),
+            isVerified: false,
+            verificationCode: verificationCode
+        };
+        
+        // Add to users array and save
+        users.push(newUser);
+        saveUsers();
+        
+        // Set as current user
+        currentUser = { ...newUser, _isAdmin: false };
+        localStorage.setItem('quickstudy_current_user', JSON.stringify(currentUser));
+        
+        // Send verification email if EmailService is available
+        if (window.EmailService && typeof window.EmailService.sendVerificationEmail === 'function') {
+            window.EmailService.sendVerificationEmail({
+                to: email,
+                name: name,
+                code: verificationCode
+            }, function(success, error) {
+                if (success) {
+                    console.log("Verification email sent successfully");
+                } else {
+                    console.error("Error sending verification email:", error);
+                    
+                    // Show fallback message if email sending fails
+                    alert(`Your verification code is: ${verificationCode}\nPlease note: We could not send the email. Please try again.`);
                 }
                 
-                showError("signup", errorMessage);
-            })
-            .finally(() => {
-                // Reset button
-                signupButton.disabled = false;
-                signupButton.innerHTML = "Create Account";
+                // Continue with account creation process
+                completeSignup();
             });
-    }
-    
-    /**
-     * Handle Google authentication
-     */
-    function handleGoogleAuth() {
-        const provider = new firebase.auth.GoogleAuthProvider();
+        } else {
+            // Fallback if EmailService is not available
+            alert(`Your verification code is: ${verificationCode}`);
+            completeSignup();
+        }
         
-        // Show loading state
-        const googleButtons = document.querySelectorAll(".qs-google-button");
-        const originalHTML = googleButtons[0].innerHTML;
-        
-        googleButtons.forEach(button => {
-            button.disabled = true;
-            button.innerHTML = '<div class="qs-spinner"></div> Connecting...';
-        });
-        
-        auth.signInWithPopup(provider)
-            .then(result => {
-                // Create or update user document
-                return createUserDocument(result.user.uid, {
-                    displayName: result.user.displayName,
-                    email: result.user.email,
-                    photoURL: result.user.photoURL,
-                    lastLogin: new Date().toISOString()
-                });
-            })
-            .then(() => {
-                // Success - will be handled by onAuthStateChanged
-                clearErrors();
-            })
-            .catch(error => {
-                console.error("Google auth error:", error);
-                
-                let errorMessage = "Failed to sign in with Google";
-                
-                switch (error.code) {
-                    case "auth/account-exists-with-different-credential":
-                        errorMessage = "An account already exists with the same email but different sign-in method";
-                        break;
-                    case "auth/popup-blocked":
-                        errorMessage = "Sign-in popup was blocked by your browser";
-                        break;
-                    case "auth/popup-closed-by-user":
-                        errorMessage = "Sign-in popup was closed before completing the sign-in";
-                        break;
-                }
-                
-                showError("login", errorMessage);
-                showError("signup", errorMessage);
-            })
-            .finally(() => {
-                // Reset buttons
-                googleButtons.forEach(button => {
-                    button.disabled = false;
-                    button.innerHTML = originalHTML;
-                });
-            });
+        function completeSignup() {
+            // Update UI
+            hideLoginScreen();
+            showUserInfo(currentUser);
+            hideAdminUI();
+            clearErrors();
+            
+            // Show verification form
+            showVerificationForm();
+            
+            console.log("New user created:", newUser.email);
+            
+            // Reset button
+            signupButton.disabled = false;
+            signupButton.innerHTML = "Create Account";
+        }
     }
     
     /**
@@ -629,39 +1122,67 @@
         // Show loading state
         const resetButton = document.getElementById("qs-reset-button");
         resetButton.disabled = true;
-        resetButton.innerHTML = '<div class="qs-spinner"></div> Sending...';
+        resetButton.innerHTML = '<div class="qs-spinner"></div> Resetting...';
         
-        auth.sendPasswordResetEmail(email)
-            .then(() => {
-                showSuccess("reset", `Password reset email sent to ${email}`);
-                document.getElementById("qs-reset-email").value = "";
+        // Find user with matching email
+        const userIndex = users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
+        
+        if (userIndex !== -1) {
+            // Don't allow resetting admin password
+            if (window.ENV && users[userIndex].email.toLowerCase() === window.ENV.ADMIN_USERNAME.toLowerCase()) {
+                showError("reset", "Admin password cannot be reset through this interface");
+                resetButton.disabled = false;
+                resetButton.innerHTML = "Reset Password";
+                return;
+            }
+            
+            // Reset password to a simple default
+            const defaultPassword = "password123";
+            users[userIndex].password = defaultPassword;
+            
+            // Save users
+            saveUsers();
+            
+            // Send password reset email if EmailService is available
+            if (window.EmailService && typeof window.EmailService.sendPasswordResetEmail === 'function') {
+                window.EmailService.sendPasswordResetEmail({
+                    to: email,
+                    name: users[userIndex].displayName || '',
+                    password: defaultPassword
+                }, function(success, error) {
+                    if (success) {
+                        // Show success message
+                        showSuccess("reset", `Password has been reset. Check your email for the new password.`);
+                    } else {
+                        console.error("Error sending password reset email:", error);
+                        
+                        // Show fallback message with password if email sending fails
+                        showSuccess("reset", `Password has been reset to: ${defaultPassword}`);
+                    }
+                    
+                    // Automatically return to login after a delay
+                    setTimeout(() => {
+                        switchTab("login");
+                    }, 3000);
+                });
+            } else {
+                // Fallback if EmailService is not available
+                showSuccess("reset", `Password has been reset to: ${defaultPassword}`);
                 
                 // Automatically return to login after a delay
                 setTimeout(() => {
                     switchTab("login");
                 }, 3000);
-            })
-            .catch(error => {
-                console.error("Password reset error:", error);
-                
-                let errorMessage = "Failed to send password reset email";
-                
-                switch (error.code) {
-                    case "auth/invalid-email":
-                        errorMessage = "Invalid email address format";
-                        break;
-                    case "auth/user-not-found":
-                        errorMessage = "No account found with this email address";
-                        break;
-                }
-                
-                showError("reset", errorMessage);
-            })
-            .finally(() => {
-                // Reset button
-                resetButton.disabled = false;
-                resetButton.innerHTML = "Send Reset Link";
-            });
+            }
+            
+            console.log(`Password reset for user: ${email}`);
+        } else {
+            showError("reset", "No account found with this email address");
+        }
+        
+        // Reset button
+        resetButton.disabled = false;
+        resetButton.innerHTML = "Reset Password";
     }
     
     /**
@@ -741,11 +1262,26 @@
         const userPanel = document.getElementById("qs-user-panel");
         const userName = document.getElementById("qs-user-name");
         const userAvatar = document.getElementById("qs-user-avatar");
+        const verificationStatus = document.getElementById("qs-verification-status");
         
         if (userPanel && userName && userAvatar) {
             userName.textContent = user.displayName || user.email;
             userAvatar.src = user.photoURL || createDefaultAvatar(user.displayName || user.email);
             userPanel.classList.add("visible");
+            
+            // Show verification status if not verified and not admin
+            if (verificationStatus && !user.isVerified && !user._isAdmin) {
+                verificationStatus.classList.remove("hidden");
+            } else if (verificationStatus) {
+                verificationStatus.classList.add("hidden");
+            }
+            
+            // Show admin UI if user is admin
+            if (isAdmin()) {
+                showAdminUI();
+            } else {
+                hideAdminUI();
+            }
         }
     }
     
@@ -817,43 +1353,25 @@
     }
     
     /**
-     * Create or update user document in Firestore
+     * Generate a unique identifier for users
      */
-    function createUserDocument(userId, userData) {
-        if (!db) return Promise.reject(new Error("Firestore not initialized"));
-        
-        const userRef = db.collection("users").doc(userId);
-        
-        return userRef.get()
-            .then(doc => {
-                if (doc.exists) {
-                    // Update existing document
-                    return userRef.update({
-                        ...userData,
-                        updatedAt: new Date().toISOString()
-                    });
-                } else {
-                    // Create new document
-                    return userRef.set({
-                        ...userData,
-                        createdAt: new Date().toISOString()
-                    });
-                }
-            });
+    function generateUid() {
+        // Simple UUID v4 implementation for demo purposes
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
     }
     
     /**
      * Update user's last login timestamp
      */
     function updateUserLastLogin(userId) {
-        if (!db) return;
-        
-        const userRef = db.collection("users").doc(userId);
-        userRef.update({
-            lastLogin: new Date().toISOString()
-        }).catch(error => {
-            console.error("Error updating last login:", error);
-        });
+        const userIndex = users.findIndex(user => user.uid === userId);
+        if (userIndex !== -1) {
+            users[userIndex].lastLogin = new Date().toISOString();
+            saveUsers();
+        }
     }
     
     /**
@@ -862,57 +1380,49 @@
     function linkWithQuickStudyMemory() {
         if (!window.QuickStudyMemory || !currentUser) return;
         
-        // Extend the original saveProgress function to also save to Firebase
+        // Extend the original saveProgress function to also save with user
         const originalSaveProgress = window.QuickStudyMemory.saveProgress;
         
         window.QuickStudyMemory.saveProgress = function(state, presetId) {
             // Call original function first
             const result = originalSaveProgress.apply(this, arguments);
             
-            // If user is logged in, save to Firestore too
-            if (currentUser && db) {
-                const userProgressRef = db.collection("users").doc(currentUser.uid)
-                    .collection("progress").doc(presetId);
-                
-                userProgressRef.set({
+            // If user is logged in, save with user ID
+            if (currentUser) {
+                const userProgressKey = `quickstudy_progress_${currentUser.uid}_${presetId}`;
+                localStorage.setItem(userProgressKey, JSON.stringify({
                     currentQuestionIndex: state.currentQuestionIndex,
                     correctAnswers: state.correctAnswers,
                     incorrectAnswers: state.incorrectAnswers,
                     totalTime: state.totalTime,
                     updatedAt: new Date().toISOString()
-                }).catch(error => {
-                    console.error("Error saving progress to Firestore:", error);
-                });
+                }));
             }
             
             return result;
         };
         
-        // Add cloud sync for progress loading
+        // Add user-specific progress loading
         const originalLoadProgress = window.QuickStudyMemory.loadProgress;
         
         window.QuickStudyMemory.loadProgress = function(presetId) {
             // First try to load from local storage
             const localProgress = originalLoadProgress.apply(this, arguments);
             
-            // If user is logged in, check for cloud progress
-            if (currentUser && db) {
-                const userProgressRef = db.collection("users").doc(currentUser.uid)
-                    .collection("progress").doc(presetId);
+            // If user is logged in, check for user-specific progress
+            if (currentUser) {
+                const userProgressKey = `quickstudy_progress_${currentUser.uid}_${presetId}`;
+                const savedProgress = localStorage.getItem(userProgressKey);
                 
-                userProgressRef.get().then(doc => {
-                    if (doc.exists) {
-                        const cloudProgress = doc.data();
-                        
-                        // If there's no local progress or cloud progress is newer, use cloud progress
-                        if (!localProgress || (cloudProgress.updatedAt > localProgress.timestamp)) {
-                            console.log("Using cloud progress for", presetId);
-                            // TODO: Implement proper progress restoration from cloud
-                        }
+                if (savedProgress) {
+                    const userProgress = JSON.parse(savedProgress);
+                    
+                    // If there's no local progress or user progress is newer, use user progress
+                    if (!localProgress || (userProgress.updatedAt > localProgress.timestamp)) {
+                        console.log("Using user-specific progress for", presetId);
+                        // This is just a placeholder - you'll need to implement proper progress restoration
                     }
-                }).catch(error => {
-                    console.error("Error loading progress from Firestore:", error);
-                });
+                }
             }
             
             return localProgress;
@@ -931,7 +1441,7 @@
             /* QuickStudy Auth Styles */
             
             /* Auth container */
-            .qs-auth-container {
+            .qs-auth-container, .qs-verification-container {
                 position: fixed;
                 top: 0;
                 left: 0;
@@ -946,12 +1456,12 @@
                 transition: opacity 0.3s ease, visibility 0.3s ease;
             }
             
-            .qs-auth-container.visible {
+            .qs-auth-container.visible, .qs-verification-container.visible {
                 opacity: 1;
                 visibility: visible;
             }
             
-            .qs-body-with-auth {
+            .qs-body-with-auth, .qs-body-with-verification {
                 overflow: hidden;
             }
             
@@ -1053,6 +1563,11 @@
                 background-color: #3498db;
             }
             
+            /* Hidden elements */
+            .hidden {
+                display: none !important;
+            }
+            
             /* Forms container */
             .qs-auth-content {
                 padding: 25px;
@@ -1152,33 +1667,6 @@
                 background-color: #546e7a;
             }
             
-            /* Google button */
-            .qs-google-button {
-                background-color: white;
-                color: #333;
-                border: 1px solid #ddd;
-                margin-top: 10px;
-            }
-            
-            .qs-google-button:hover {
-                background-color: #f5f5f5;
-                color: #333;
-            }
-            
-            .dark-mode .qs-google-button {
-                background-color: #34495e;
-                color: #ecf0f1;
-                border-color: #546e7a;
-            }
-            
-            .dark-mode .qs-google-button:hover {
-                background-color: #2c3e50;
-            }
-            
-            .qs-google-icon {
-                margin-right: 10px;
-            }
-            
             /* Links */
             .qs-auth-links {
                 text-align: center;
@@ -1205,33 +1693,12 @@
                 color: #3498db;
             }
             
-            /* Separator */
-            .qs-auth-separator {
-                display: flex;
-                align-items: center;
-                margin: 20px 0;
-            }
-            
-            .qs-auth-separator::before,
-            .qs-auth-separator::after {
-                content: '';
-                flex: 1;
-                height: 1px;
-                background-color: #e0e0e0;
-            }
-            
-            .dark-mode .qs-auth-separator::before,
-            .dark-mode .qs-auth-separator::after {
-                background-color: #546e7a;
-            }
-            
-            .qs-auth-separator span {
-                padding: 0 10px;
+            .qs-link-separator {
+                margin: 0 8px;
                 color: #7f8c8d;
-                font-size: 0.8rem;
             }
             
-            .dark-mode .qs-auth-separator span {
+            .dark-mode .qs-link-separator {
                 color: #bdc3c7;
             }
             
@@ -1269,12 +1736,13 @@
             }
             
             /* Reset password info */
-            .qs-reset-info {
+            .qs-reset-info, .qs-verification-info {
                 margin-bottom: 20px;
                 color: #7f8c8d;
             }
             
-            .dark-mode .qs-reset-info {
+            .dark-mode .qs-reset-info, 
+            .dark-mode .qs-verification-info {
                 color: #bdc3c7;
             }
             
@@ -1404,6 +1872,31 @@
                 color: #ecf0f1;
             }
             
+            /* Verification badge */
+            .qs-verification-status {
+                margin-right: 10px;
+            }
+            
+            .qs-verification-badge {
+                background-color: #e74c3c;
+                color: white;
+                font-size: 0.7rem;
+                padding: 3px 8px;
+                border-radius: 10px;
+                display: inline-block;
+            }
+            
+            /* Verification status in admin panel */
+            .qs-verification-status-verified {
+                color: #2ecc71;
+                font-weight: bold;
+            }
+            
+            .qs-verification-status-unverified {
+                color: #e74c3c;
+                font-weight: bold;
+            }
+            
             .qs-logout-button {
                 background-color: #e74c3c;
                 color: white;
@@ -1424,26 +1917,174 @@
             .qs-logout-button:hover {
                 background-color: #c0392b;
             }
-
-            /* Add this to your CSS styles */
-            .qs-auth-loading .qs-auth-container {
-                display: none;
+            
+            /* Admin Panel Styles */
+            .qs-admin-note {
+                background-color: rgba(52, 152, 219, 0.1);
+                color: #3498db;
+                padding: 10px;
+                border-radius: 5px;
+                margin-bottom: 15px;
+                font-size: 0.9rem;
+                text-align: center;
             }
-
-            /* Loading state with no auth flicker */
-            .qs-auth-loading::before {
-                content: '';
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                background-color: #fff;
-                z-index: 9998;
+            
+            .qs-admin-controls {
+                display: flex;
+                gap: 10px;
+                margin-bottom: 20px;
+                flex-wrap: wrap;
             }
-
-            .dark-mode.qs-auth-loading::before {
-                background-color: #2c3e50;
+            
+            .qs-admin-button {
+                background-color: #3498db;
+                color: white;
+                border: none;
+                padding: 8px 15px;
+                border-radius: 5px;
+                font-size: 0.9rem;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                flex: 1;
+            }
+            
+            .qs-admin-button:hover {
+                background-color: #2980b9;
+                transform: translateY(-2px);
+            }
+            
+            .qs-admin-section {
+                margin-top: 20px;
+            }
+            
+            .qs-admin-section h4 {
+                margin-bottom: 10px;
+                color: #2c3e50;
+                border-bottom: 1px solid #e0e0e0;
+                padding-bottom: 5px;
+            }
+            
+            .dark-mode .qs-admin-section h4 {
+                color: #ecf0f1;
+                border-bottom-color: #546e7a;
+            }
+            
+            .qs-user-list {
+                max-height: 300px;
+                overflow-y: auto;
+                border: 1px solid #ddd;
+                border-radius: 5px;
+            }
+            
+            .dark-mode .qs-user-list {
+                border-color: #546e7a;
+            }
+            
+            .qs-user-item {
+                padding: 10px;
+                border-bottom: 1px solid #eee;
+                position: relative;
+            }
+            
+            .dark-mode .qs-user-item {
+                border-bottom-color: #546e7a;
+            }
+            
+            .qs-user-item:last-child {
+                border-bottom: none;
+            }
+            
+            .qs-user-email {
+                font-weight: bold;
+                color: #3498db;
+                margin-bottom: 5px;
+            }
+            
+            .qs-user-password {
+                color: #e74c3c;
+                margin-bottom: 5px;
+                font-family: monospace;
+            }
+            
+            .qs-user-name, .qs-user-created, .qs-user-lastlogin, .qs-user-verification {
+                font-size: 0.9rem;
+                color: #7f8c8d;
+                margin-bottom: 3px;
+            }
+            
+            .dark-mode .qs-user-name, 
+            .dark-mode .qs-user-created, 
+            .dark-mode .qs-user-lastlogin,
+            .dark-mode .qs-user-verification {
+                color: #bdc3c7;
+            }
+            
+            .qs-user-actions {
+                display: flex;
+                gap: 5px;
+                margin-top: 10px;
+            }
+            
+            .qs-user-actions button {
+                background-color: #f1f1f1;
+                border: none;
+                padding: 5px 10px;
+                border-radius: 3px;
+                font-size: 0.8rem;
+                cursor: pointer;
+                transition: all 0.2s ease;
+            }
+            
+            .dark-mode .qs-user-actions button {
+                background-color: #34495e;
+                color: #ecf0f1;
+            }
+            
+            .qs-delete-user {
+                color: #e74c3c;
+            }
+            
+            .qs-delete-user:hover {
+                background-color: #e74c3c;
+                color: white;
+            }
+            
+            .qs-reset-user-pwd {
+                color: #3498db;
+            }
+            
+            .qs-reset-user-pwd:hover {
+                background-color: #3498db;
+                color: white;
+            }
+            
+            .qs-verify-user {
+                color: #2ecc71;
+            }
+            
+            .qs-verify-user:hover {
+                background-color: #2ecc71;
+                color: white;
+            }
+            
+            /* Admin button in user panel */
+            .qs-admin-button-container {
+                margin-right: 10px;
+            }
+            
+            .qs-admin-dashboard-button {
+                background-color: #9b59b6;
+                color: white;
+                border: none;
+                border-radius: 20px;
+                padding: 6px 12px;
+                font-size: 0.8rem;
+                cursor: pointer;
+                transition: background-color 0.2s ease;
+            }
+            
+            .qs-admin-dashboard-button:hover {
+                background-color: #8e44ad;
             }
             
             /* Responsive styles */
@@ -1463,12 +2104,13 @@
                 .qs-user-details {
                     display: none; /* Hide name on mobile */
                 }
+                
+                .qs-admin-controls {
+                    flex-direction: column;
+                }
             }
         `;
         
         document.head.appendChild(styleEl);
     }
-    
-    // Initialize as soon as the DOM is ready
-    document.addEventListener("DOMContentLoaded", initialize);
 })();
