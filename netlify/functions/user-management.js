@@ -11,8 +11,24 @@ exports.handler = async function(event, context) {
     const data = JSON.parse(event.body);
     const { action, payload } = data;
     
-    // Get the users store
-    const usersStore = getStore("user-database");
+    // Check if necessary environment variables are set
+    if (!process.env.NETLIFY_SITE_ID || !process.env.NETLIFY_API_TOKEN) {
+      console.error("Missing required environment variables for Netlify Blobs");
+      return { 
+        statusCode: 500, 
+        body: JSON.stringify({ 
+          success: false, 
+          message: "Server misconfiguration: Missing Netlify Blobs environment variables."
+        })
+      };
+    }
+    
+    // Get the users store with explicit configuration
+    const usersStore = getStore({
+      name: "user-database",
+      siteID: process.env.NETLIFY_SITE_ID,
+      token: process.env.NETLIFY_API_TOKEN
+    });
     
     // Different actions based on request
     switch (action) {
