@@ -1,18 +1,12 @@
 // netlify/functions/user-management.js
-const fs = require('fs');
-const path = require('path');
-
-// Path to our "database" file
-const DB_PATH = path.join('/tmp', 'users.json');
+const { getStore } = require('@netlify/blobs');
 
 // Helper to read the user database
-function readUserDB() {
+async function readUserDB() {
+  const store = getStore("users");
   try {
-    if (fs.existsSync(DB_PATH)) {
-      const data = fs.readFileSync(DB_PATH, 'utf8');
-      return JSON.parse(data);
-    }
-    return { users: [] };
+    const data = await store.get("userdb");
+    return data ? JSON.parse(data) : { users: [] };
   } catch (error) {
     console.error('Error reading user database:', error);
     return { users: [] };
@@ -20,9 +14,10 @@ function readUserDB() {
 }
 
 // Helper to write to the user database
-function writeUserDB(data) {
+async function writeUserDB(data) {
+  const store = getStore("users");
   try {
-    fs.writeFileSync(DB_PATH, JSON.stringify(data));
+    await store.set("userdb", JSON.stringify(data));
     return true;
   } catch (error) {
     console.error('Error writing user database:', error);
@@ -44,7 +39,7 @@ exports.handler = async function(event, context) {
     switch (action) {
       case 'getUsers':
         // Return all users
-        const db = readUserDB();
+        const db = await readUserDB();
         return { 
           statusCode: 200, 
           body: JSON.stringify({ success: true, users: db.users }) 
@@ -52,7 +47,7 @@ exports.handler = async function(event, context) {
         
       case 'addUser':
         // Add a new user to the database
-        const dbForAdd = readUserDB();
+        const dbForAdd = await readUserDB();
         
         // Check if email already exists
         if (dbForAdd.users.some(u => u.email.toLowerCase() === payload.user.email.toLowerCase())) {
@@ -64,7 +59,7 @@ exports.handler = async function(event, context) {
         
         // Add the user and save
         dbForAdd.users.push(payload.user);
-        writeUserDB(dbForAdd);
+        await writeUserDB(dbForAdd);
         
         return { 
           statusCode: 200, 
@@ -73,7 +68,7 @@ exports.handler = async function(event, context) {
         
       case 'updateUser':
         // Update an existing user
-        const dbForUpdate = readUserDB();
+        const dbForUpdate = await readUserDB();
         const userIndex = dbForUpdate.users.findIndex(u => u.uid === payload.user.uid);
         
         if (userIndex === -1) {
@@ -85,7 +80,7 @@ exports.handler = async function(event, context) {
         
         // Update user and save
         dbForUpdate.users[userIndex] = payload.user;
-        writeUserDB(dbForUpdate);
+        await writeUserDB(dbForUpdate);
         
         return { 
           statusCode: 200, 
@@ -94,9 +89,9 @@ exports.handler = async function(event, context) {
         
       case 'deleteUser':
         // Delete a user
-        const dbForDelete = readUserDB();
+        const dbForDelete = await readUserDB();
         dbForDelete.users = dbForDelete.users.filter(u => u.uid !== payload.uid);
-        writeUserDB(dbForDelete);
+        await writeUserDB(dbForDelete);
         
         return { 
           statusCode: 200, 

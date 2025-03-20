@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@netlify/blobs": "^8.1.1",
     "nodemailer": "^6.10.0"
   }
 }
