@@ -27,22 +27,29 @@
     // Helper function for API calls to user management endpoint
     async function callUserManagementAPI(action, payload) {
         try {
-            const response = await fetch('/.netlify/functions/user-management', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action, payload })
-            });
-            
-            if (!response.ok) {
-                throw new Error(`Server responded with ${response.status}`);
-            }
-            
-            return await response.json();
+          console.log(`Making API call: ${action} with payload:`, payload);
+          
+          const response = await fetch('/.netlify/functions/user-management', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, payload })
+          });
+          
+          if (!response.ok) {
+            // Get the error text for better debugging
+            const errorText = await response.text();
+            console.error(`Server response error (${response.status}):`, errorText);
+            throw new Error(`Server responded with ${response.status}: ${errorText}`);
+          }
+          
+          const responseData = await response.json();
+          console.log(`API response for ${action}:`, responseData);
+          return responseData;
         } catch (error) {
-            console.error(`API Error (${action}):`, error);
-            throw error;
+          console.error(`API Error (${action}):`, error);
+          throw error;
         }
-    }
+      }
 
     // Get admin token for privileged operations
     function getAdminToken() {
