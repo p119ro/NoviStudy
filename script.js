@@ -619,6 +619,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 filename: 'presets/apchemistryunit17.csv',
                 description: 'HW Problems and More'
             };
+
+            const calculusUnit8 = {
+                name: 'AP Calculus Unit 8 Quiz',
+                filename: 'presets/apcalcunit8.csv',
+                description: 'Circuit Problems'
+            };
     
             const calculusUnit7 = {
                 name: 'AP Calculus Unit 7 Test',
@@ -733,6 +739,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
             const calculus = subjectCategories.find(cat => cat.id === 'calculus');
             if (calculus) {
+                calculus.presets.push(calculusUnit8);
                 calculus.presets.push(calculusUnit7);
                 calculus.presets.push(calculusUnit6);
             }
