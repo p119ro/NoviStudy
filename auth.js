@@ -1,13 +1,18 @@
-// auth.js - Simple Authentication for QuickStudy using localStorage
+// auth.js - Simplified Authentication for QuickStudy using localStorage and Netlify Functions
 (function() {
     // Variables to track state
     let currentUser = null;
     let users = []; // Array to store all users
     
+    // Configuration - hardcoded values moved to Netlify environment variables
+    const config = {
+        appName: 'NoviStudy',
+        verificationExpiryHours: 24
+    };
+    
     // Public API for other scripts to use
     window.QuickStudyAuth = {
-        // Don't initialize immediately - will be called when ENV is ready
-        initialize: null, // Will be defined later
+        initialize,
         getCurrentUser,
         isLoggedIn,
         signOut,
@@ -15,69 +20,6 @@
         isAdmin,
         verifyEmail
     };
-    
-    // Listen for environment variables to be loaded
-    window.addEventListener('env-loaded', function() {
-        console.log('Environment ready, initializing authentication system');
-        
-        // Only proceed if we have required environment variables
-        if (!window.ENV || !window.ENV.ADMIN_USERNAME || !window.ENV.ADMIN_PASSWORD) {
-            console.error('Authentication system initialization failed: Missing required environment variables');
-            return;
-        }
-        
-        // Now define the initialize function with environment variables available
-        window.QuickStudyAuth.initialize = initialize;
-        
-        // Auto-initialize if DOM is already loaded
-        if (document.readyState === 'interactive' || document.readyState === 'complete') {
-            initialize();
-        } else {
-            document.addEventListener("DOMContentLoaded", initialize);
-        }
-    });
-
-        /**
-     * Send verification email using Netlify Function
-     * @param {Object} params - Email parameters
-     * @param {string} params.to - Recipient email
-     * @param {string} params.name - Recipient name
-     * @param {string} params.code - Verification code
-     * @param {function} callback - Callback function(success, errorMsg)
-     */
-    function sendVerificationEmailViaNetlify(params, callback) {
-        console.log("Sending verification email via Netlify Function");
-        
-        fetch('/.netlify/functions/send-verification', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            email: params.to,
-            name: params.name,
-            code: params.code
-        })
-        })
-        .then(response => {
-        if (!response.ok) {
-            throw new Error(`Server responded with ${response.status}`);
-        }
-        return response.json();
-        })
-        .then(data => {
-        console.log("Email function response:", data);
-        if (data.success) {
-            callback(true);
-        } else {
-            callback(false, data.message || "Unknown error");
-        }
-        })
-        .catch(error => {
-        console.error("Error calling email function:", error);
-        callback(false, error.message);
-        });
-    }
     
     /**
      * Initialize Auth System
@@ -149,6 +91,76 @@
     }
     
     /**
+     * Check admin status securely via server function
+     * @param {string} username - Username to check
+     * @param {string} password - Password to check
+     * @returns {Promise<boolean>} - True if admin credentials are valid
+     */
+    async function checkAdminCredentials(username, password) {
+        try {
+            const response = await fetch('/.netlify/functions/verify-admin', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ username, password })
+            });
+            
+            if (!response.ok) {
+                return false;
+            }
+            
+            const data = await response.json();
+            return data.isAdmin === true;
+        } catch (error) {
+            console.error("Error verifying admin credentials:", error);
+            return false;
+        }
+    }
+    
+    /**
+     * Send verification email using Netlify Function
+     * @param {Object} params - Email parameters
+     * @param {string} params.to - Recipient email
+     * @param {string} params.name - Recipient name
+     * @param {string} params.code - Verification code
+     * @param {function} callback - Callback function(success, errorMsg)
+     */
+    function sendVerificationEmailViaNetlify(params, callback) {
+        console.log("Sending verification email via Netlify Function");
+        
+        fetch('/.netlify/functions/send-verification', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                email: params.to,
+                name: params.name,
+                code: params.code
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`Server responded with ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log("Email function response:", data);
+            if (data.success) {
+                callback(true);
+            } else {
+                callback(false, data.message || "Unknown error");
+            }
+        })
+        .catch(error => {
+            console.error("Error calling email function:", error);
+            callback(false, error.message);
+        });
+    }
+    
+    /**
      * Get current user
      */
     function getCurrentUser() {
@@ -166,12 +178,7 @@
      * Check if current user is admin
      */
     function isAdmin() {
-        if (!window.ENV || !window.ENV.ADMIN_USERNAME) return false;
-        
-        return currentUser && 
-               currentUser.email && 
-               currentUser.email.toLowerCase() === window.ENV.ADMIN_USERNAME.toLowerCase() && 
-               currentUser._isAdmin === true;
+        return currentUser && currentUser._isAdmin === true;
     }
     
     /**
@@ -200,7 +207,7 @@
                     <div class="qs-auth-overlay"></div>
                     <div class="qs-auth-modal">
                         <div class="qs-auth-logo">
-                            <h1>${window.ENV.APP_NAME || 'NoviStudy'}</h1>
+                            <h1>${config.appName}</h1>
                             <p>Study smarter, not harder</p>
                         </div>
                         
@@ -299,7 +306,7 @@
                     <div class="qs-auth-overlay"></div>
                     <div class="qs-auth-modal">
                         <div class="qs-auth-logo">
-                            <h1>${window.ENV.APP_NAME || 'NoviStudy'}</h1>
+                            <h1>${config.appName}</h1>
                             <p>Email Verification</p>
                         </div>
                         
@@ -594,22 +601,30 @@
             users[userIndex].password = defaultPassword;
             saveUsers();
             
-            // Send password reset email if EmailService is available
-            if (window.EmailService && typeof window.EmailService.sendPasswordResetEmail === 'function') {
-                window.EmailService.sendPasswordResetEmail({
-                    to: users[userIndex].email,
+            // Send password reset email using Netlify function
+            fetch('/.netlify/functions/send-password-reset', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: users[userIndex].email,
                     name: users[userIndex].displayName || '',
                     password: defaultPassword
-                }, function(success, error) {
-                    if (success) {
-                        alert(`Password reset email sent to ${users[userIndex].email}`);
-                    } else {
-                        alert(`Password reset to "${defaultPassword}" for user: ${users[userIndex].email}, but email could not be sent. Error: ${error}`);
-                    }
-                });
-            } else {
-                alert(`Password reset to "${defaultPassword}" for user: ${users[userIndex].email}`);
-            }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`Password reset email sent to ${users[userIndex].email}`);
+                } else {
+                    alert(`Password reset to "${defaultPassword}" for user: ${users[userIndex].email}, but email could not be sent. Error: ${data.message}`);
+                }
+            })
+            .catch(error => {
+                console.error("Error sending password reset email:", error);
+                alert(`Password reset to "${defaultPassword}" for user: ${users[userIndex].email}, but email could not be sent.`);
+            });
         }
     }
     
@@ -667,7 +682,7 @@
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${window.ENV.APP_NAME || 'novistudi'}_users.csv`;
+        a.download = `${config.appName}_users.csv`;
         
         // Trigger download
         document.body.appendChild(a);
@@ -746,7 +761,7 @@
     /**
      * Handle login form submission
      */
-    function handleLogin() {
+    async function handleLogin() {
         const identifier = document.getElementById("qs-login-email").value;
         const password = document.getElementById("qs-login-password").value;
         
@@ -760,92 +775,96 @@
         loginButton.disabled = true;
         loginButton.innerHTML = '<div class="qs-spinner"></div> Logging in...';
         
-        // Check if this is the admin login - use environment variables
-        if (window.ENV && 
-            identifier.toLowerCase() === window.ENV.ADMIN_USERNAME.toLowerCase() && 
-            password === window.ENV.ADMIN_PASSWORD) {
+        try {
+            // Check if this is the admin login using secure server function
+            const isAdminUser = await checkAdminCredentials(identifier, password);
             
-            // Check if admin user exists in the database
-            let adminUser = users.find(u => u.email.toLowerCase() === window.ENV.ADMIN_USERNAME.toLowerCase());
-            
-            if (!adminUser) {
-                // Create admin user if it doesn't exist
-                adminUser = {
-                    uid: generateUid(),
-                    email: window.ENV.ADMIN_USERNAME,
-                    password: "●●●●●●●●", // Don't store actual password
-                    displayName: "Admin User",
-                    photoURL: createDefaultAvatar("Admin"),
-                    createdAt: new Date().toISOString(),
-                    lastLogin: new Date().toISOString(),
-                    isVerified: true,
-                    isAdmin: true
-                };
+            if (isAdminUser) {
+                // Check if admin user exists in the database
+                let adminUser = users.find(u => u.email.toLowerCase() === identifier.toLowerCase());
                 
-                users.push(adminUser);
-                saveUsers();
-            }
-            
-            // Create a copy with admin flag but without password
-            currentUser = { 
-                ...adminUser,
-                _isAdmin: true
-            };
-            
-            // Don't store password in localStorage
-            if (currentUser.password === window.ENV.ADMIN_PASSWORD) {
-                currentUser.password = "●●●●●●●●";
-            }
-            
-            localStorage.setItem('quickstudy_current_user', JSON.stringify(currentUser));
-            
-            // Update UI to show admin elements
-            showAdminUI();
-            
-            // Update last login
-            updateUserLastLogin(adminUser.uid);
-            
-            // Hide login screen
-            hideLoginScreen();
-            showUserInfo(currentUser);
-            clearErrors();
-            console.log("Admin signed in");
-        } else {
-            // Regular user login - find user with matching email and password
-            const user = users.find(u => 
-                (u.email.toLowerCase() === identifier.toLowerCase()) && 
-                u.password === password
-            );
-            
-            if (user) {
-                // Success - set current user and update UI
-                currentUser = { ...user, _isAdmin: false };
-                localStorage.setItem('quickstudy_current_user', JSON.stringify(currentUser));
-                
-                // Update last login
-                updateUserLastLogin(user.uid);
-                
-                // Update UI
-                hideLoginScreen();
-                showUserInfo(currentUser);
-                hideAdminUI();
-                
-                // Check if email needs verification
-                if (!user.isVerified) {
-                    showVerificationForm();
+                if (!adminUser) {
+                    // Create admin user if it doesn't exist
+                    adminUser = {
+                        uid: generateUid(),
+                        email: identifier,
+                        password: "●●●●●●●●", // Don't store actual password
+                        displayName: "Admin User",
+                        photoURL: createDefaultAvatar("Admin"),
+                        createdAt: new Date().toISOString(),
+                        lastLogin: new Date().toISOString(),
+                        isVerified: true,
+                        isAdmin: true
+                    };
+                    
+                    users.push(adminUser);
+                    saveUsers();
                 }
                 
+                // Create a copy with admin flag but without password
+                currentUser = { 
+                    ...adminUser,
+                    _isAdmin: true
+                };
+                
+                // Don't store password in localStorage
+                if (currentUser.password === password) {
+                    currentUser.password = "●●●●●●●●";
+                }
+                
+                localStorage.setItem('quickstudy_current_user', JSON.stringify(currentUser));
+                
+                // Update UI to show admin elements
+                showAdminUI();
+                
+                // Update last login
+                updateUserLastLogin(adminUser.uid);
+                
+                // Hide login screen
+                hideLoginScreen();
+                showUserInfo(currentUser);
                 clearErrors();
-                console.log("User signed in:", currentUser.email);
+                console.log("Admin signed in");
             } else {
-                console.error("Login error: Invalid credentials");
-                showError("login", "Invalid email or password");
+                // Regular user login - find user with matching email and password
+                const user = users.find(u => 
+                    (u.email.toLowerCase() === identifier.toLowerCase()) && 
+                    u.password === password
+                );
+                
+                if (user) {
+                    // Success - set current user and update UI
+                    currentUser = { ...user, _isAdmin: false };
+                    localStorage.setItem('quickstudy_current_user', JSON.stringify(currentUser));
+                    
+                    // Update last login
+                    updateUserLastLogin(user.uid);
+                    
+                    // Update UI
+                    hideLoginScreen();
+                    showUserInfo(currentUser);
+                    hideAdminUI();
+                    
+                    // Check if email needs verification
+                    if (!user.isVerified) {
+                        showVerificationForm();
+                    }
+                    
+                    clearErrors();
+                    console.log("User signed in:", currentUser.email);
+                } else {
+                    console.error("Login error: Invalid credentials");
+                    showError("login", "Invalid email or password");
+                }
             }
+        } catch (error) {
+            console.error("Login error:", error);
+            showError("login", "Error during login. Please try again.");
+        } finally {
+            // Reset button
+            loginButton.disabled = false;
+            loginButton.innerHTML = "Log In";
         }
-        
-        // Reset button
-        loginButton.disabled = false;
-        loginButton.innerHTML = "Log In";
     }
     
     /**
@@ -937,48 +956,24 @@
             saveUsers();
             localStorage.setItem('quickstudy_current_user', JSON.stringify(currentUser));
             
-            // First try Netlify function
+            // Send verification email using Netlify function
             sendVerificationEmailViaNetlify({
                 to: currentUser.email,
                 name: currentUser.displayName || '',
                 code: verificationCode
             }, function(success, error) {
                 if (success) {
-                    console.log("Verification email sent successfully via Netlify function");
+                    console.log("Verification email sent successfully");
                     showSuccess("verification", "Verification code has been sent to your email");
                 } else {
-                    console.error("Error sending via Netlify function, falling back to EmailService:", error);
+                    console.error("Error sending verification email:", error);
                     
-                    // Fall back to EmailService if available
-                    if (window.EmailService && typeof window.EmailService.sendVerificationEmail === 'function') {
-                        window.EmailService.sendVerificationEmail({
-                            to: currentUser.email,
-                            name: currentUser.displayName || '',
-                            code: verificationCode
-                        }, function(success, error) {
-                            if (success) {
-                                console.log("Verification email sent successfully via EmailService");
-                                showSuccess("verification", "Verification code has been sent to your email");
-                            } else {
-                                console.error("All email services failed:", error);
-                                
-                                // Only show code to admin for testing
-                                if (isAdmin()) {
-                                    console.log("Admin testing - verification code:", verificationCode);
-                                    showError("verification", "Email service failed (admin mode). See console for code.");
-                                } else {
-                                    showError("verification", "Unable to send verification email. Please try again later.");
-                                }
-                            }
-                        });
+                    // Only show code to admin for testing if all methods fail
+                    if (isAdmin()) {
+                        console.log("Admin testing - verification code:", verificationCode);
+                        showError("verification", "Email services unavailable (admin mode). See console for code.");
                     } else {
-                        // Only show code to admin for testing if all methods fail
-                        if (isAdmin()) {
-                            console.log("Admin testing - verification code:", verificationCode);
-                            showError("verification", "Email services unavailable (admin mode). See console for code.");
-                        } else {
-                            showError("verification", "Email verification service is unavailable. Please try again later.");
-                        }
+                        showError("verification", "Email verification service is unavailable. Please try again later.");
                     }
                 }
             });
@@ -1103,9 +1098,6 @@
     /**
      * Handle signup form submission
      */
-   /**
- * Handle signup form submission
- */
     function handleSignup() {
         const name = document.getElementById("qs-signup-name").value;
         const email = document.getElementById("qs-signup-email").value;
@@ -1124,12 +1116,6 @@
         // Check if email already in use
         if (users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
             showError("signup", "Email is already in use");
-            return;
-        }
-        
-        // Check if trying to use admin username
-        if (window.ENV && email.toLowerCase() === window.ENV.ADMIN_USERNAME.toLowerCase()) {
-            showError("signup", "This username is not available");
             return;
         }
         
@@ -1171,65 +1157,28 @@
             name: name,
             code: verificationCode
         }, function(success, error) {
+            // Complete signup regardless of email success
+            completeSignup();
+            
             if (success) {
-                console.log("Verification email sent successfully via Netlify function");
-                
-                // Complete signup first, then show success message with slight delay
-                completeSignup();
+                console.log("Verification email sent successfully");
+                // Show success message with slight delay
                 setTimeout(() => {
                     showSuccess("verification", "Verification code has been sent to your email");
                 }, 300);
             } else {
-                console.error("Error sending via Netlify function, trying EmailService:", error);
+                console.error("Error sending verification email:", error);
                 
-                // Try EmailService if available (as fallback)
-                if (window.EmailService && typeof window.EmailService.sendVerificationEmail === 'function') {
-                    window.EmailService.sendVerificationEmail({
-                        to: email,
-                        name: name,
-                        code: verificationCode
-                    }, function(emailServiceSuccess, emailServiceError) {
-                        if (emailServiceSuccess) {
-                            console.log("Verification email sent successfully via EmailService");
-                            
-                            // Complete signup first, then show success message with slight delay
-                            completeSignup();
-                            setTimeout(() => {
-                                showSuccess("verification", "Verification code has been sent to your email");
-                            }, 300);
-                        } else {
-                            console.error("All email services failed:", emailServiceError);
-                            
-                            // Complete signup regardless of email failure
-                            completeSignup();
-                            
-                            // Show appropriate error message
-                            setTimeout(() => {
-                                // Only show code to admin for testing
-                                if (isAdmin()) {
-                                    console.log("Admin testing - verification code:", verificationCode);
-                                    showError("verification", "Email services failed (admin mode). See console for code.");
-                                } else {
-                                    showError("verification", "We couldn't send a verification email. Please try the 'Resend Code' option.");
-                                }
-                            }, 300);
-                        }
-                    });
-                } else {
-                    // Complete signup regardless of email service availability
-                    completeSignup();
-                    
-                    // Show appropriate error after form is visible
-                    setTimeout(() => {
-                        // Only show code to admin for testing
-                        if (isAdmin()) {
-                            console.log("Admin testing - verification code:", verificationCode);
-                            showError("verification", "Email services unavailable (admin mode). See console for code.");
-                        } else {
-                            showError("verification", "Email verification service is currently unavailable. Please try again later.");
-                        }
-                    }, 300);
-                }
+                // Show appropriate error message after form is visible
+                setTimeout(() => {
+                    // Only show code to admin for testing
+                    if (isAdmin()) {
+                        console.log("Admin testing - verification code:", verificationCode);
+                        showError("verification", "Email services unavailable (admin mode). See console for code.");
+                    } else {
+                        showError("verification", "Email verification service is currently unavailable. Please try again later.");
+                    }
+                }, 300);
             }
         });
         
@@ -1271,14 +1220,6 @@
         const userIndex = users.findIndex(u => u.email.toLowerCase() === email.toLowerCase());
         
         if (userIndex !== -1) {
-            // Don't allow resetting admin password
-            if (window.ENV && users[userIndex].email.toLowerCase() === window.ENV.ADMIN_USERNAME.toLowerCase()) {
-                showError("reset", "Admin password cannot be reset through this interface");
-                resetButton.disabled = false;
-                resetButton.innerHTML = "Reset Password";
-                return;
-            }
-            
             // Reset password to a simple default
             const defaultPassword = "password123";
             users[userIndex].password = defaultPassword;
@@ -1286,37 +1227,46 @@
             // Save users
             saveUsers();
             
-            // Send password reset email if EmailService is available
-            if (window.EmailService && typeof window.EmailService.sendPasswordResetEmail === 'function') {
-                window.EmailService.sendPasswordResetEmail({
-                    to: email,
+            // Send password reset email using Netlify function
+            fetch('/.netlify/functions/send-password-reset', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    email: email,
                     name: users[userIndex].displayName || '',
                     password: defaultPassword
-                }, function(success, error) {
-                    if (success) {
-                        // Show success message
-                        showSuccess("reset", `Password has been reset. Check your email for the new password.`);
-                    } else {
-                        console.error("Error sending password reset email:", error);
-                        
-                        // Show fallback message with password if email sending fails
-                        showSuccess("reset", `Password has been reset to: ${defaultPassword}`);
-                    }
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    showSuccess("reset", `Password has been reset. Check your email for the new password.`);
+                } else {
+                    console.error("Error sending password reset email:", data.message);
                     
-                    // Automatically return to login after a delay
-                    setTimeout(() => {
-                        switchTab("login");
-                    }, 3000);
-                });
-            } else {
-                // Fallback if EmailService is not available
+                    // Show fallback message with password if email sending fails
+                    showSuccess("reset", `Password has been reset to: ${defaultPassword}`);
+                }
+                
+                // Automatically return to login after a delay
+                setTimeout(() => {
+                    switchTab("login");
+                }, 3000);
+            })
+            .catch(error => {
+                console.error("Error sending password reset email:", error);
+                
+                // Fallback if email service is not available
                 showSuccess("reset", `Password has been reset to: ${defaultPassword}`);
                 
                 // Automatically return to login after a delay
                 setTimeout(() => {
                     switchTab("login");
                 }, 3000);
-            }
+            });
             
             console.log(`Password reset for user: ${email}`);
         } else {
@@ -1499,7 +1449,7 @@
      * Generate a unique identifier for users
      */
     function generateUid() {
-        // Simple UUID v4 implementation for demo purposes
+        // Simple UUID v4 implementation
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
             var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
             return v.toString(16);
@@ -1564,6 +1514,7 @@
                     if (!localProgress || (userProgress.updatedAt > localProgress.timestamp)) {
                         console.log("Using user-specific progress for", presetId);
                         // This is just a placeholder - you'll need to implement proper progress restoration
+                        return userProgress;
                     }
                 }
             }
@@ -2255,5 +2206,12 @@
         `;
         
         document.head.appendChild(styleEl);
+    }
+    
+    // Initialize on DOM ready
+    if (document.readyState === 'interactive' || document.readyState === 'complete') {
+        initialize();
+    } else {
+        document.addEventListener("DOMContentLoaded", initialize);
     }
 })();

@@ -1,7 +1,23 @@
 // Gemini AI-powered answer comparison
 window.QuickStudyAI = (function() {
-    const GEMINI_API_KEY = "AIzaSyDcFHXQESrEooiFRIdvxDVeLmQ_VZPlzKE"; // In production, this should NEVER be in client-side code
+    // Instead of hardcoded API key
+    const GEMINI_API_KEY = ""; // Will be provided via server environment
     const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent";
+
+    // Function to get API key from server
+    async function getApiKey() {
+        try {
+            const response = await fetch('/.netlify/functions/get-gemini-key');
+            if (!response.ok) {
+                throw new Error('Failed to get API key');
+            }
+            const data = await response.json();
+            return data.key;
+        } catch (error) {
+            console.error("Error fetching API key:", error);
+            return null;
+        }
+    }
 
     // Keep a context for chat history to enable follow-up questions
     const chatContext = {
