@@ -378,13 +378,15 @@
     
 
     function ensureVerificationFormExists() {
-        if (document.getElementById("qs-verification-container")) {
-            return; // Already exists
+        // Remove any existing verification container to avoid duplicates
+        const existingContainer = document.getElementById("qs-verification-container");
+        if (existingContainer) {
+            existingContainer.remove();
         }
         
-        console.log("Creating verification form");
+        console.log("Creating new verification form");
         
-        // Create just the verification form
+        // Create the complete verification form HTML
         const verificationHTML = `
             <div id="qs-verification-container" class="qs-verification-container">
                 <div class="qs-auth-overlay"></div>
@@ -422,30 +424,50 @@
             </div>
         `;
         
+        // Create a div element with the verification form
         const tempDiv = document.createElement("div");
         tempDiv.innerHTML = verificationHTML;
-        document.body.appendChild(tempDiv.firstElementChild);
+        
+        // Append the verification form to the body
+        const verificationElement = tempDiv.firstElementChild;
+        document.body.appendChild(verificationElement);
+        
+        // Force a browser reflow to ensure the element is added to the DOM
+        void verificationElement.offsetHeight;
         
         // Attach verification form event listeners
-        document.getElementById("qs-verification-form").addEventListener("submit", (e) => {
-            e.preventDefault();
-            handleVerification();
-        });
+        const verificationForm = document.getElementById("qs-verification-form");
+        if (verificationForm) {
+            verificationForm.addEventListener("submit", (e) => {
+                e.preventDefault();
+                handleVerification();
+            });
+        } else {
+            console.error("Failed to find verification form after creation");
+        }
         
-        document.getElementById("qs-resend-code").addEventListener("click", (e) => {
-            e.preventDefault();
-            resendVerificationCode();
-        });
+        const resendCodeLink = document.getElementById("qs-resend-code");
+        if (resendCodeLink) {
+            resendCodeLink.addEventListener("click", (e) => {
+                e.preventDefault();
+                resendVerificationCode();
+            });
+        }
         
-        document.getElementById("qs-skip-verification").addEventListener("click", (e) => {
-            e.preventDefault();
-            if (isAdmin()) {
-                hideVerificationForm();
-                console.log("Admin override: Verification skipped");
-            } else {
-                showError("verification", "Email verification is required to use this application.");
-            }
-        });
+        const skipVerificationLink = document.getElementById("qs-skip-verification");
+        if (skipVerificationLink) {
+            skipVerificationLink.addEventListener("click", (e) => {
+                e.preventDefault();
+                if (isAdmin()) {
+                    hideVerificationForm();
+                    console.log("Admin override: Verification skipped");
+                } else {
+                    showError("verification", "Email verification is required to use this application.");
+                }
+            });
+        }
+        
+        return verificationElement;
     }
 
     /**
@@ -921,14 +943,35 @@
                     
                     // Check if email needs verification
                     if (!user.isVerified) {
-                        console.log("User needs verification, displaying form");
-                        // Ensure verification form exists and show it
-                        ensureVerificationFormExists();
+                        console.log("User needs verification, preparing to display form");
                         
-                        // Small timeout to allow UI to update
+                        // Complete reset and rebuild of verification form
+                        const verificationElement = ensureVerificationFormExists();
+                        
+                        // First update the code if needed
+                        if (!currentUser.verificationCode) {
+                            generateAndSendVerificationCode();
+                        }
+                        
+                        // Force sync layout then show with small delay
+                        void document.body.offsetHeight; 
+                        
                         setTimeout(() => {
-                            showVerificationForm();
-                        }, 100);
+                            console.log("Showing verification form now");
+                            
+                            // Show verification badge in user panel
+                            const verificationStatus = document.getElementById("qs-verification-status");
+                            if (verificationStatus) {
+                                verificationStatus.classList.remove("hidden");
+                            }
+                            
+                            // Show the verification form
+                            if (verificationElement) {
+                                verificationElement.classList.add("visible");
+                                document.body.classList.add("qs-body-with-verification");
+                                console.log("Verification form displayed");
+                            }
+                        }, 200); // 200ms delay for a more reliable display
                     }
                     
                     clearErrors();
