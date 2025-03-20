@@ -35,19 +35,38 @@
             body: JSON.stringify({ action, payload })
           });
           
-          if (!response.ok) {
-            // Get the error text for better debugging
-            const errorText = await response.text();
-            console.error(`Server response error (${response.status}):`, errorText);
-            throw new Error(`Server responded with ${response.status}: ${errorText}`);
-          }
+          // Get the response text for all responses
+          const responseText = await response.text();
           
-          const responseData = await response.json();
-          console.log(`API response for ${action}:`, responseData);
-          return responseData;
+          try {
+            // Try to parse as JSON
+            const responseData = JSON.parse(responseText);
+            
+            if (!response.ok) {
+              console.error(`Server response error (${response.status}):`, responseData);
+              return {
+                success: false,
+                status: response.status,
+                message: responseData.message || "Unknown error"
+              };
+            }
+            
+            console.log(`API response for ${action}:`, responseData);
+            return responseData;
+          } catch (parseError) {
+            // If not valid JSON, return the text
+            console.error(`Error parsing response: ${responseText}`);
+            return {
+              success: false,
+              message: "Invalid response format: " + responseText
+            };
+          }
         } catch (error) {
           console.error(`API Error (${action}):`, error);
-          throw error;
+          return {
+            success: false,
+            message: error.message
+          };
         }
       }
 
@@ -65,14 +84,76 @@
         // Create the login UI
         createLoginUI();
         
+        // Load local users first
+        await loadLocalUsers();
+        
         // Check if a user was previously logged in
         await checkPersistedLogin();
         
-        // Then load all users (might be needed for admin functions)
-        await loadUsers();
+        // Then try to sync with server
+        await syncWithServer();
         
         console.log("Auth system initialized successfully");
-    }
+      }
+      
+      async function loadLocalUsers() {
+        try {
+          const savedUsers = localStorage.getItem('quickstudy_users');
+          if (savedUsers) {
+            users = JSON.parse(savedUsers);
+            console.log(`Loaded ${users.length} users from local storage`);
+          } else {
+            users = [];
+            console.log("No existing users found in local storage");
+          }
+        } catch (error) {
+          console.error("Error loading local users:", error);
+          users = [];
+        }
+      }
+      
+      async function syncWithServer() {
+        try {
+          // Try to fetch from server
+          const result = await callUserManagementAPI('getUsers', {});
+          
+          if (result.success && result.users) {
+            // Compare server and local users
+            const serverUsers = result.users;
+            const localUserIds = users.map(u => u.uid);
+            const serverUserIds = serverUsers.map(u => u.uid);
+            
+            // Find users that exist locally but not on server
+            const usersToAddToServer = users.filter(u => !serverUserIds.includes(u.uid));
+            
+            // Find users that exist on server but not locally
+            const usersToAddLocally = serverUsers.filter(u => !localUserIds.includes(u.uid));
+            
+            // Add local users to server
+            for (const user of usersToAddToServer) {
+              try {
+                await callUserManagementAPI('addUser', { user });
+                console.log(`User ${user.email} synced to server`);
+              } catch (error) {
+                console.error(`Failed to sync user ${user.email} to server:`, error);
+              }
+            }
+            
+            // Add server users locally
+            for (const user of usersToAddLocally) {
+              users.push(user);
+              console.log(`User ${user.email} added from server to local storage`);
+            }
+            
+            // Save merged users back to localStorage
+            localStorage.setItem('quickstudy_users', JSON.stringify(users));
+            console.log("User synchronization complete");
+          }
+        } catch (error) {
+          console.error("Error syncing with server:", error);
+          // Continue with local users only
+        }
+      }
     
     /**
      * Load users from localStorage
@@ -143,69 +224,33 @@
         // Always save to localStorage for quick local access
         localStorage.setItem('quickstudy_users', JSON.stringify(users));
         
-        // If we're admin, ensure all users are synced to server
-        if (currentUser && currentUser._isAdmin) {
+        // Try to sync with server
+        try {
+          // For each user in local storage, ensure they exist on server
+          for (const user of users) {
             try {
-                // Get current server users to compare
-                const result = await callUserManagementAPI('getUsers', { 
-                    adminToken: getAdminToken() 
-                });
-                
-                if (result.success && result.users) {
-                    const serverUserMap = {};
-                    result.users.forEach(user => {
-                        serverUserMap[user.uid] = user;
-                    });
-                    
-                    // Find users that need to be created or updated on server
-                    for (const user of users) {
-                        const serverUser = serverUserMap[user.uid];
-                        
-                        if (!serverUser) {
-                            // New user - create on server
-                            try {
-                                await callUserManagementAPI('addUser', { user });
-                                console.log(`User ${user.email} added to server`);
-                            } catch (error) {
-                                console.error(`Failed to add user ${user.email} to server:`, error);
-                            }
-                        } else {
-                            // Existing user - update if needed
-                            // Compare lastLogin to see if we need to update
-                            if (new Date(user.lastLogin) > new Date(serverUser.lastLogin) || 
-                                user.isVerified !== serverUser.isVerified ||
-                                user.password !== serverUser.password) {
-                                try {
-                                    await callUserManagementAPI('updateUser', { user });
-                                    console.log(`User ${user.email} updated on server`);
-                                } catch (error) {
-                                    console.error(`Failed to update user ${user.email} on server:`, error);
-                                }
-                            }
-                        }
-                    }
-                    
-                    // Find users that were deleted locally but exist on server
-                    const localUserIds = users.map(u => u.uid);
-                    const deletedUserIds = Object.keys(serverUserMap).filter(uid => !localUserIds.includes(uid));
-                    
-                    for (const uid of deletedUserIds) {
-                        try {
-                            await callUserManagementAPI('deleteUser', { 
-                                uid, 
-                                adminToken: getAdminToken() 
-                            });
-                            console.log(`User ${serverUserMap[uid].email} deleted from server`);
-                        } catch (error) {
-                            console.error(`Failed to delete user ${serverUserMap[uid].email} from server:`, error);
-                        }
-                    }
+              // First try to update the user
+              const updateResult = await callUserManagementAPI('updateUser', { user });
+              
+              if (!updateResult.success) {
+                // If update failed, try to add user
+                const addResult = await callUserManagementAPI('addUser', { user });
+                if (addResult.success) {
+                  console.log(`User ${user.email} added to server after failed update`);
+                } else {
+                  console.warn(`Failed to sync user ${user.email} to server:`, addResult.message);
                 }
+              }
             } catch (error) {
-                console.error("Failed to sync users with server:", error);
+              console.error(`Error syncing user ${user.email} to server:`, error);
+              // Continue with next user
             }
+          }
+        } catch (error) {
+          console.error("Failed to sync users with server:", error);
+          // Continue with local storage only
         }
-    }
+      }
     
     /**
      * Check if there's a persisted login
@@ -1361,8 +1406,8 @@
         const code = document.getElementById("qs-verification-code").value;
         
         if (!code) {
-            showError("verification", "Please enter the verification code");
-            return;
+          showError("verification", "Please enter the verification code");
+          return;
         }
         
         // Show loading state
@@ -1372,49 +1417,71 @@
         
         // Check the code
         if (currentUser && currentUser.verificationCode === code) {
-            // Mark user as verified
-            const userIndex = users.findIndex(u => u.uid === currentUser.uid);
-            if (userIndex !== -1) {
-                users[userIndex].isVerified = true;
-                users[userIndex].verificationCode = null;
-                currentUser.isVerified = true;
-                currentUser.verificationCode = null;
-                
-                try {
-                    // Update on server
-                    await callUserManagementAPI('updateUser', {
-                        user: users[userIndex]
-                    });
-                    
-                    // Save to local storage
-                    localStorage.setItem('quickstudy_users', JSON.stringify(users));
-                    localStorage.setItem('quickstudy_current_user', JSON.stringify(currentUser));
-                    
-                    // Show success and hide verification form after delay
-                    showSuccess("verification", "Email verified successfully!");
-                    
-                    // Hide verification badge
-                    const verificationStatus = document.getElementById("qs-verification-status");
-                    if (verificationStatus) {
-                        verificationStatus.classList.add("hidden");
-                    }
-                    
-                    setTimeout(() => {
-                        hideVerificationForm();
-                    }, 2000);
-                } catch (error) {
-                    console.error("Error updating verification status on server:", error);
-                    showError("verification", "Verification succeeded but failed to sync with server. Please try again.");
-                }
+          // Mark user as verified
+          const userIndex = users.findIndex(u => u.uid === currentUser.uid);
+          if (userIndex !== -1) {
+            users[userIndex].isVerified = true;
+            users[userIndex].verificationCode = null;
+            currentUser.isVerified = true;
+            currentUser.verificationCode = null;
+            
+            try {
+              // Update on server
+              const serverResult = await callUserManagementAPI('updateUser', {
+                user: users[userIndex]
+              });
+              
+              if (serverResult.success) {
+                console.log("User verification status updated on server");
+              } else {
+                console.log("Warning: User verification updated locally only", serverResult.message);
+              }
+              
+              // Save to local storage regardless of server result
+              localStorage.setItem('quickstudy_users', JSON.stringify(users));
+              localStorage.setItem('quickstudy_current_user', JSON.stringify(currentUser));
+              
+              // Show success and hide verification form after delay
+              showSuccess("verification", "Email verified successfully!");
+              
+              // Hide verification badge
+              const verificationStatus = document.getElementById("qs-verification-status");
+              if (verificationStatus) {
+                verificationStatus.classList.add("hidden");
+              }
+              
+              setTimeout(() => {
+                hideVerificationForm();
+              }, 2000);
+            } catch (error) {
+              console.error("Error updating verification status on server:", error);
+              
+              // Continue with local verification even if server sync fails
+              showSuccess("verification", "Email verified successfully! (Offline mode)");
+              
+              // Still save to local storage
+              localStorage.setItem('quickstudy_users', JSON.stringify(users));
+              localStorage.setItem('quickstudy_current_user', JSON.stringify(currentUser));
+              
+              // Hide verification badge
+              const verificationStatus = document.getElementById("qs-verification-status");
+              if (verificationStatus) {
+                verificationStatus.classList.add("hidden");
+              }
+              
+              setTimeout(() => {
+                hideVerificationForm();
+              }, 2000);
             }
+          }
         } else {
-            showError("verification", "Invalid verification code. Please try again.");
+          showError("verification", "Invalid verification code. Please try again.");
         }
         
         // Reset button
         verifyButton.disabled = false;
         verifyButton.innerHTML = "Verify Email";
-    }
+      }
     
     /**
      * Verify email with code (public method)
@@ -1451,6 +1518,51 @@
         return false;
     }
     
+    async function forceSyncUsers() {
+        console.log("Force syncing users to server...");
+        
+        try {
+          // Try bulk sync first (more efficient)
+          const syncResult = await callUserManagementAPI('syncUsers', { users });
+          
+          if (syncResult.success) {
+            console.log("Bulk user sync completed successfully:", syncResult.message);
+            return true;
+          }
+          
+          // If bulk sync fails, try individual sync
+          console.log("Bulk sync failed, trying individual user sync...");
+          
+          // Loop through all local users
+          for (const user of users) {
+            try {
+              // First try to update
+              const updateResult = await callUserManagementAPI('updateUser', { user });
+              
+              if (!updateResult.success) {
+                // If update fails, try to add
+                const addResult = await callUserManagementAPI('addUser', { user });
+                if (addResult.success) {
+                  console.log(`User ${user.email} added to server`);
+                } else {
+                  console.warn(`Failed to sync user ${user.email}:`, addResult.message);
+                }
+              } else {
+                console.log(`User ${user.email} updated on server`);
+              }
+            } catch (error) {
+              console.error(`Failed to sync user ${user.email}:`, error);
+            }
+          }
+          
+          console.log("User sync completed");
+          return true;
+        } catch (error) {
+          console.error("Force sync failed:", error);
+          return false;
+        }
+      }
+
     /**
      * Handle signup form submission
      */
@@ -1460,19 +1572,19 @@
         const password = document.getElementById("qs-signup-password").value;
         
         if (!name || !email || !password) {
-            showError("signup", "Please fill in all fields");
-            return;
+          showError("signup", "Please fill in all fields");
+          return;
         }
         
         if (password.length < 6) {
-            showError("signup", "Password must be at least 6 characters");
-            return;
+          showError("signup", "Password must be at least 6 characters");
+          return;
         }
         
         // Check if email already in use
         if (users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
-            showError("signup", "Email is already in use");
-            return;
+          showError("signup", "Email is already in use");
+          return;
         }
         
         // Show loading state
@@ -1485,76 +1597,98 @@
         
         // Create new user
         const newUser = {
-            uid: generateUid(),
-            email: email,
-            password: password,
-            displayName: name,
-            photoURL: createDefaultAvatar(name),
-            createdAt: new Date().toISOString(),
-            lastLogin: new Date().toISOString(),
-            isVerified: false,
-            verificationCode: verificationCode
+          uid: generateUid(),
+          email: email,
+          password: password,
+          displayName: name,
+          photoURL: createDefaultAvatar(name),
+          createdAt: new Date().toISOString(),
+          lastLogin: new Date().toISOString(),
+          isVerified: false,
+          verificationCode: verificationCode
         };
         
-        // Add to users array and save
-        users.push(newUser);
-        saveUsers();
+        // First try to add user to the server
+        callUserManagementAPI('addUser', { user: newUser })
+          .then(response => {
+            if (response.success) {
+              console.log("User added to server successfully");
+            } else {
+              console.log("Warning: User created locally only. Server message:", response.message);
+            }
+            
+            // Continue with local user creation regardless of server success
+            completeLocalSignup();
+          })
+          .catch(error => {
+            console.error("Failed to add user to server:", error);
+            // Continue with local user creation
+            completeLocalSignup();
+          });
         
-        // Set as current user
-        currentUser = { ...newUser, _isAdmin: false };
-        localStorage.setItem('quickstudy_current_user', JSON.stringify(currentUser));
-        
-        // Clear previous errors
-        clearErrors();
-        
-        // Send verification email using Netlify Function
-        sendVerificationEmailViaNetlify({
+        // Function to complete local signup process
+        function completeLocalSignup() {
+          // Add to users array and save
+          users.push(newUser);
+          // Use the original saveUsers function
+          localStorage.setItem('quickstudy_users', JSON.stringify(users));
+          
+          // Set as current user
+          currentUser = { ...newUser, _isAdmin: false };
+          localStorage.setItem('quickstudy_current_user', JSON.stringify(currentUser));
+          
+          // Clear previous errors
+          clearErrors();
+          
+          // Send verification email using Netlify Function
+          sendVerificationEmailViaNetlify({
             to: email,
             name: name,
             code: verificationCode
-        }, function(success, error) {
+          }, function(success, error) {
             // Complete signup regardless of email success
-            completeSignup();
+            completeUISignup();
             
             if (success) {
-                console.log("Verification email sent successfully");
-                // Show success message with slight delay
-                setTimeout(() => {
-                    showSuccess("verification", "Verification code has been sent to your email");
-                }, 300);
+              console.log("Verification email sent successfully");
+              // Show success message with slight delay
+              setTimeout(() => {
+                showSuccess("verification", "Verification code has been sent to your email");
+              }, 300);
             } else {
-                console.error("Error sending verification email:", error);
-                
-                // Show appropriate error message after form is visible
-                setTimeout(() => {
-                    // Only show code to admin for testing
-                    if (isAdmin()) {
-                        console.log("Admin testing - verification code:", verificationCode);
-                        showError("verification", "Email services unavailable (admin mode). See console for code.");
-                    } else {
-                        showError("verification", "Email verification service is currently unavailable. Please try again later.");
-                    }
-                }, 300);
+              console.error("Error sending verification email:", error);
+              
+              // Show appropriate error message after form is visible
+              setTimeout(() => {
+                // Only show code to admin for testing
+                if (isAdmin()) {
+                  console.log("Admin testing - verification code:", verificationCode);
+                  showError("verification", "Email services unavailable (admin mode). See console for code.");
+                } else {
+                  showError("verification", "Email verification service is currently unavailable. Please try again later.");
+                }
+              }, 300);
             }
-        });
-        
-        // Helper function to complete the signup process
-        function completeSignup() {
-            // Update UI
-            hideLoginScreen();
-            showUserInfo(currentUser);
-            hideAdminUI();
-            
-            // Show verification form
-            showVerificationForm();
-            
-            console.log("New user created:", newUser.email);
-            
-            // Reset button state
-            signupButton.disabled = false;
-            signupButton.innerHTML = "Create Account";
+          });
         }
-    }
+        
+        // Function to update UI after signup
+        function completeUISignup() {
+          // Update UI
+          hideLoginScreen();
+          showUserInfo(currentUser);
+          hideAdminUI();
+          
+          // Show verification form
+          showVerificationForm();
+          
+          console.log("New user created:", newUser.email);
+          
+          // Reset button state
+          signupButton.disabled = false;
+          signupButton.innerHTML = "Create Account";
+        }
+      }
     
     /**
      * Handle password reset
