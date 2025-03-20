@@ -43,11 +43,6 @@ exports.handler = async function(event, context) {
     // Different actions based on request
     switch (action) {
       case 'getUsers':
-        // Verify admin credentials
-        if (!payload.adminToken) {
-          return { statusCode: 401, body: JSON.stringify({ success: false, message: 'Unauthorized' }) };
-        }
-        
         // Return all users
         const db = readUserDB();
         return { 
@@ -99,11 +94,6 @@ exports.handler = async function(event, context) {
         
       case 'deleteUser':
         // Delete a user
-        // Require admin token for this action
-        if (!payload.adminToken) {
-          return { statusCode: 401, body: JSON.stringify({ success: false, message: 'Unauthorized' }) };
-        }
-        
         const dbForDelete = readUserDB();
         dbForDelete.users = dbForDelete.users.filter(u => u.uid !== payload.uid);
         writeUserDB(dbForDelete);
