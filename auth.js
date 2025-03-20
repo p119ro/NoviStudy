@@ -376,6 +376,78 @@
         }
     }
     
+
+    function ensureVerificationFormExists() {
+        if (document.getElementById("qs-verification-container")) {
+            return; // Already exists
+        }
+        
+        console.log("Creating verification form");
+        
+        // Create just the verification form
+        const verificationHTML = `
+            <div id="qs-verification-container" class="qs-verification-container">
+                <div class="qs-auth-overlay"></div>
+                <div class="qs-auth-modal">
+                    <div class="qs-auth-logo">
+                        <h1>${config.appName}</h1>
+                        <p>Email Verification</p>
+                    </div>
+                    
+                    <div class="qs-auth-content">
+                        <form id="qs-verification-form" class="qs-auth-form active">
+                            <div id="qs-verification-error" class="qs-auth-error"></div>
+                            <div id="qs-verification-message" class="qs-auth-message"></div>
+                            
+                            <p class="qs-verification-info">
+                                We've sent a verification code to your email. 
+                                Please enter the code below to verify your account.
+                            </p>
+                            
+                            <div class="qs-input-group">
+                                <label for="qs-verification-code">Verification Code</label>
+                                <input type="text" id="qs-verification-code" placeholder="Enter 6-digit code" required>
+                            </div>
+                            
+                            <button type="submit" id="qs-verify-button" class="qs-auth-button">Verify Email</button>
+                            
+                            <div class="qs-auth-links">
+                                <a href="#" id="qs-resend-code">Resend Code</a>
+                                <span class="qs-link-separator">|</span>
+                                <a href="#" id="qs-skip-verification">Skip for now</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = verificationHTML;
+        document.body.appendChild(tempDiv.firstElementChild);
+        
+        // Attach verification form event listeners
+        document.getElementById("qs-verification-form").addEventListener("submit", (e) => {
+            e.preventDefault();
+            handleVerification();
+        });
+        
+        document.getElementById("qs-resend-code").addEventListener("click", (e) => {
+            e.preventDefault();
+            resendVerificationCode();
+        });
+        
+        document.getElementById("qs-skip-verification").addEventListener("click", (e) => {
+            e.preventDefault();
+            if (isAdmin()) {
+                hideVerificationForm();
+                console.log("Admin override: Verification skipped");
+            } else {
+                showError("verification", "Email verification is required to use this application.");
+            }
+        });
+    }
+
     /**
      * Add event listeners to authentication forms
      */
@@ -849,9 +921,14 @@
                     
                     // Check if email needs verification
                     if (!user.isVerified) {
+                        console.log("User needs verification, displaying form");
+                        // Ensure verification form exists and show it
+                        ensureVerificationFormExists();
+                        
+                        // Small timeout to allow UI to update
                         setTimeout(() => {
                             showVerificationForm();
-                        }, 100); // Short delay to ensure DOM is ready
+                        }, 100);
                     }
                     
                     clearErrors();
@@ -911,6 +988,11 @@
     function showVerificationForm() {
         if (!currentUser || currentUser._isAdmin) return;
         
+        console.log("Showing verification form");
+        
+        // Ensure verification form exists in DOM
+        ensureVerificationFormExists();
+        
         // Generate verification code if needed
         if (!currentUser.verificationCode) {
             generateAndSendVerificationCode();
@@ -927,6 +1009,9 @@
         if (verificationContainer) {
             verificationContainer.classList.add("visible");
             document.body.classList.add("qs-body-with-verification");
+            console.log("Verification form displayed");
+        } else {
+            console.error("Verification container not found even after creation attempt");
         }
     }
     
