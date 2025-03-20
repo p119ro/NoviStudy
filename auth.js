@@ -365,9 +365,11 @@
             
             const div = document.createElement("div");
             div.innerHTML = loginHTML;
-            document.body.appendChild(div.firstElementChild);
-            document.body.appendChild(div.firstElementChild);
-            document.body.appendChild(div.firstElementChild);
+            // Append all children properly
+            const elements = Array.from(div.children);
+            elements.forEach(element => {
+                document.body.appendChild(element);
+            });
             
             // Add event listeners
             addEventListeners();
@@ -847,7 +849,9 @@
                     
                     // Check if email needs verification
                     if (!user.isVerified) {
-                        showVerificationForm();
+                        setTimeout(() => {
+                            showVerificationForm();
+                        }, 100); // Short delay to ensure DOM is ready
                     }
                     
                     clearErrors();
