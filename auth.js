@@ -761,7 +761,7 @@
     }
     
     /**
-     * Handle login form submission
+     * Handle logi form submission
      */
     async function handleLogin() {
         const identifier = document.getElementById("qs-login-email").value;
