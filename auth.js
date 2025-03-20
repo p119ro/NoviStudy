@@ -22,19 +22,47 @@
     };
     
     /**
+     * Utility functions for API calls
+     */
+    // Helper function for API calls to user management endpoint
+    async function callUserManagementAPI(action, payload) {
+        try {
+            const response = await fetch('/.netlify/functions/user-management', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action, payload })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Server responded with ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error(`API Error (${action}):`, error);
+            throw error;
+        }
+    }
+
+    // Get admin token for privileged operations
+    function getAdminToken() {
+        return currentUser && currentUser._isAdmin ? 'admin-token' : null;
+    }
+
+    /**
      * Initialize Auth System
      */
-    function initialize() {
+    async function initialize() {
         console.log("Initializing Simple Auth System");
-        
-        // Load existing users from localStorage
-        loadUsers();
         
         // Create the login UI
         createLoginUI();
         
         // Check if a user was previously logged in
-        checkPersistedLogin();
+        await checkPersistedLogin();
+        
+        // Then load all users (might be needed for admin functions)
+        await loadUsers();
         
         console.log("Auth system initialized successfully");
     }
@@ -42,37 +70,149 @@
     /**
      * Load users from localStorage
      */
-    function loadUsers() {
-        const savedUsers = localStorage.getItem('quickstudy_users');
-        if (savedUsers) {
-            users = JSON.parse(savedUsers);
-            console.log(`Loaded ${users.length} users from storage`);
-        } else {
-            // Create an empty user array - no default users
+    /**
+ * Load users from server and localStorage
+ */
+    async function loadUsers() {
+        try {
+            // First try to load from localStorage for backward compatibility
+            const savedUsers = localStorage.getItem('quickstudy_users');
+            if (savedUsers) {
+                users = JSON.parse(savedUsers);
+                console.log(`Loaded ${users.length} users from local storage`);
+            } else {
+                users = [];
+                console.log("No existing users found in local storage");
+            }
+            
+            // Always try to fetch from server
+            try {
+                const result = await callUserManagementAPI('getUsers', { 
+                    adminToken: getAdminToken() 
+                });
+                
+                if (result.success && result.users) {
+                    // Merge server users with local users to prevent data loss
+                    const serverUserIds = result.users.map(u => u.uid);
+                    
+                    // Keep any local users that aren't on server yet
+                    const uniqueLocalUsers = users.filter(u => !serverUserIds.includes(u.uid));
+                    
+                    // If we found unique local users and we're admin, sync them to server
+                    if (uniqueLocalUsers.length > 0 && currentUser && currentUser._isAdmin) {
+                        console.log(`Syncing ${uniqueLocalUsers.length} local users to server...`);
+                        for (const user of uniqueLocalUsers) {
+                            try {
+                                await callUserManagementAPI('addUser', { user });
+                            } catch (error) {
+                                console.error(`Failed to sync user ${user.email} to server:`, error);
+                            }
+                        }
+                    }
+                    
+                    // Update users with the merged list
+                    users = [...result.users, ...uniqueLocalUsers];
+                    
+                    // Save the merged list back to localStorage
+                    localStorage.setItem('quickstudy_users', JSON.stringify(users));
+                    console.log(`Loaded ${result.users.length} users from server`);
+                }
+            } catch (error) {
+                console.error("Failed to fetch users from server:", error);
+                // Continue with local users only
+            }
+        } catch (error) {
+            console.error("Error loading users:", error);
+            // Initialize with empty array as fallback
             users = [];
-            saveUsers();
-            console.log("No existing users found");
+            localStorage.setItem('quickstudy_users', JSON.stringify(users));
         }
     }
     
     /**
      * Save users to localStorage
      */
-    function saveUsers() {
+    async function saveUsers() {
+        // Always save to localStorage for quick local access
         localStorage.setItem('quickstudy_users', JSON.stringify(users));
+        
+        // If we're admin, ensure all users are synced to server
+        if (currentUser && currentUser._isAdmin) {
+            try {
+                // Get current server users to compare
+                const result = await callUserManagementAPI('getUsers', { 
+                    adminToken: getAdminToken() 
+                });
+                
+                if (result.success && result.users) {
+                    const serverUserMap = {};
+                    result.users.forEach(user => {
+                        serverUserMap[user.uid] = user;
+                    });
+                    
+                    // Find users that need to be created or updated on server
+                    for (const user of users) {
+                        const serverUser = serverUserMap[user.uid];
+                        
+                        if (!serverUser) {
+                            // New user - create on server
+                            try {
+                                await callUserManagementAPI('addUser', { user });
+                                console.log(`User ${user.email} added to server`);
+                            } catch (error) {
+                                console.error(`Failed to add user ${user.email} to server:`, error);
+                            }
+                        } else {
+                            // Existing user - update if needed
+                            // Compare lastLogin to see if we need to update
+                            if (new Date(user.lastLogin) > new Date(serverUser.lastLogin) || 
+                                user.isVerified !== serverUser.isVerified ||
+                                user.password !== serverUser.password) {
+                                try {
+                                    await callUserManagementAPI('updateUser', { user });
+                                    console.log(`User ${user.email} updated on server`);
+                                } catch (error) {
+                                    console.error(`Failed to update user ${user.email} on server:`, error);
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Find users that were deleted locally but exist on server
+                    const localUserIds = users.map(u => u.uid);
+                    const deletedUserIds = Object.keys(serverUserMap).filter(uid => !localUserIds.includes(uid));
+                    
+                    for (const uid of deletedUserIds) {
+                        try {
+                            await callUserManagementAPI('deleteUser', { 
+                                uid, 
+                                adminToken: getAdminToken() 
+                            });
+                            console.log(`User ${serverUserMap[uid].email} deleted from server`);
+                        } catch (error) {
+                            console.error(`Failed to delete user ${serverUserMap[uid].email} from server:`, error);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to sync users with server:", error);
+            }
+        }
     }
     
     /**
      * Check if there's a persisted login
      */
-    function checkPersistedLogin() {
+    async function checkPersistedLogin() {
         const savedUser = localStorage.getItem('quickstudy_current_user');
         if (savedUser) {
             currentUser = JSON.parse(savedUser);
             console.log("User signed in from persistent storage:", currentUser.email);
             hideLoginScreen();
             showUserInfo(currentUser);
-            updateUserLastLogin(currentUser.uid);
+            
+            // Always update last login timestamp
+            await updateUserLastLogin(currentUser.uid);
             
             // If QuickStudyMemory exists, link it with user data
             if (window.QuickStudyMemory) {
@@ -81,7 +221,13 @@
             
             // Check if user needs verification
             if (!currentUser.isVerified && !currentUser._isAdmin) {
-                showVerificationForm();
+                // Ensure verification form exists first
+                ensureVerificationFormExists();
+                
+                // Show verification form after a short delay
+                setTimeout(() => {
+                    showVerificationForm();
+                }, 100);
             }
         } else {
             console.log("No user signed in");
@@ -682,59 +828,120 @@
     /**
      * Delete a user by UID
      */
-    function deleteUser(uid) {
-        users = users.filter(user => user.uid !== uid);
-        saveUsers();
+    async function deleteUser(uid) {
+        try {
+            // Delete from server if admin
+            if (currentUser && currentUser._isAdmin) {
+                await callUserManagementAPI('deleteUser', {
+                    uid, 
+                    adminToken: getAdminToken()
+                });
+            }
+            
+            // Always remove from local storage
+            users = users.filter(user => user.uid !== uid);
+            localStorage.setItem('quickstudy_users', JSON.stringify(users));
+            
+            console.log(`User deleted: ${uid}`);
+            return true;
+        } catch (error) {
+            console.error("Error deleting user:", error);
+            return false;
+        }
     }
     
     /**
      * Reset a user's password to default
      */
-    function resetUserPassword(uid) {
+    async function resetUserPassword(uid) {
         const userIndex = users.findIndex(user => user.uid === uid);
         if (userIndex !== -1) {
             const defaultPassword = "password123";
-            users[userIndex].password = defaultPassword;
-            saveUsers();
             
-            // Send password reset email using Netlify function
-            fetch('/.netlify/functions/send-password-reset', {
+            // Update user in local array
+            users[userIndex].password = defaultPassword;
+            
+            try {
+                // Update on server if admin
+                if (currentUser && currentUser._isAdmin) {
+                    await callUserManagementAPI('updateUser', {
+                        user: users[userIndex]
+                    });
+                }
+                
+                // Save to local storage
+                localStorage.setItem('quickstudy_users', JSON.stringify(users));
+                
+                // Send password reset email
+                return sendPasswordResetEmail(users[userIndex].email, 
+                                              users[userIndex].displayName, 
+                                              defaultPassword);
+            } catch (error) {
+                console.error("Error resetting password on server:", error);
+                // Continue with local reset only
+            }
+        }
+        return false;
+    }
+    
+    async function sendPasswordResetEmail(email, name, password) {
+        try {
+            const response = await fetch('/.netlify/functions/send-password-reset', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    email: users[userIndex].email,
-                    name: users[userIndex].displayName || '',
-                    password: defaultPassword
+                    email: email,
+                    name: name || '',
+                    password: password
                 })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert(`Password reset email sent to ${users[userIndex].email}`);
-                } else {
-                    alert(`Password reset to "${defaultPassword}" for user: ${users[userIndex].email}, but email could not be sent. Error: ${data.message}`);
-                }
-            })
-            .catch(error => {
-                console.error("Error sending password reset email:", error);
-                alert(`Password reset to "${defaultPassword}" for user: ${users[userIndex].email}, but email could not be sent.`);
             });
+            
+            const data = await response.json();
+            if (data.success) {
+                alert(`Password reset email sent to ${email}`);
+                return true;
+            } else {
+                alert(`Password reset to "${password}" for user: ${email}, but email could not be sent. Error: ${data.message}`);
+                return false;
+            }
+        } catch (error) {
+            console.error("Error sending password reset email:", error);
+            alert(`Password reset to "${password}" for user: ${email}, but email could not be sent.`);
+            return false;
         }
     }
     
     /**
      * Manually verify a user (admin function)
      */
-    function verifyUserManually(uid) {
+    async function verifyUserManually(uid) {
         const userIndex = users.findIndex(user => user.uid === uid);
         if (userIndex !== -1) {
             users[userIndex].isVerified = true;
             users[userIndex].verificationCode = null;
-            saveUsers();
-            alert(`User ${users[userIndex].email} has been verified.`);
+            
+            try {
+                // Update on server if admin
+                if (currentUser && currentUser._isAdmin) {
+                    await callUserManagementAPI('updateUser', {
+                        user: users[userIndex]
+                    });
+                }
+                
+                // Save to local storage
+                localStorage.setItem('quickstudy_users', JSON.stringify(users));
+                
+                alert(`User ${users[userIndex].email} has been verified.`);
+                return true;
+            } catch (error) {
+                console.error("Error verifying user on server:", error);
+                alert(`User ${users[userIndex].email} has been verified locally only.`);
+                // Continue with local verification only
+            }
         }
+        return false;
     }
     
     /**
@@ -1143,7 +1350,7 @@
     /**
      * Handle verification code submission
      */
-    function handleVerification() {
+    async function handleVerification() {
         const code = document.getElementById("qs-verification-code").value;
         
         if (!code) {
@@ -1166,22 +1373,32 @@
                 currentUser.isVerified = true;
                 currentUser.verificationCode = null;
                 
-                // Save changes
-                saveUsers();
-                localStorage.setItem('quickstudy_current_user', JSON.stringify(currentUser));
-                
-                // Show success and hide verification form after delay
-                showSuccess("verification", "Email verified successfully!");
-                
-                // Hide verification badge
-                const verificationStatus = document.getElementById("qs-verification-status");
-                if (verificationStatus) {
-                    verificationStatus.classList.add("hidden");
+                try {
+                    // Update on server
+                    await callUserManagementAPI('updateUser', {
+                        user: users[userIndex]
+                    });
+                    
+                    // Save to local storage
+                    localStorage.setItem('quickstudy_users', JSON.stringify(users));
+                    localStorage.setItem('quickstudy_current_user', JSON.stringify(currentUser));
+                    
+                    // Show success and hide verification form after delay
+                    showSuccess("verification", "Email verified successfully!");
+                    
+                    // Hide verification badge
+                    const verificationStatus = document.getElementById("qs-verification-status");
+                    if (verificationStatus) {
+                        verificationStatus.classList.add("hidden");
+                    }
+                    
+                    setTimeout(() => {
+                        hideVerificationForm();
+                    }, 2000);
+                } catch (error) {
+                    console.error("Error updating verification status on server:", error);
+                    showError("verification", "Verification succeeded but failed to sync with server. Please try again.");
                 }
-                
-                setTimeout(() => {
-                    hideVerificationForm();
-                }, 2000);
             }
         } else {
             showError("verification", "Invalid verification code. Please try again.");
@@ -1591,11 +1808,24 @@
     /**
      * Update user's last login timestamp
      */
-    function updateUserLastLogin(userId) {
+    async function updateUserLastLogin(userId) {
         const userIndex = users.findIndex(user => user.uid === userId);
         if (userIndex !== -1) {
             users[userIndex].lastLogin = new Date().toISOString();
-            saveUsers();
+            
+            try {
+                // Update on server
+                await callUserManagementAPI('updateUser', {
+                    user: users[userIndex]
+                });
+                
+                // Save to local storage
+                localStorage.setItem('quickstudy_users', JSON.stringify(users));
+            } catch (error) {
+                console.error("Error updating last login on server:", error);
+                // Save to local storage anyway
+                localStorage.setItem('quickstudy_users', JSON.stringify(users));
+            }
         }
     }
     
