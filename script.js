@@ -579,7 +579,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     icon: '💰',
                     description: 'AP Economics study materials',
                     presets: []
-                
                 },
                 {
                     id: 'ib-business',
@@ -592,10 +591,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     id: 'psychology',
                     name: 'AP Psychology',
                     icon: '🧠',
-                        description: 'AP Psychology study materials',
+                    description: 'AP Psychology study materials',
                     presets: []
                 }
-
             ];
     
             // Preset files - assign to appropriate categories
@@ -604,7 +602,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 filename: 'presets/unit17mcqreview.csv',
                 description: 'MCQ Review for Test'
             };
-
+    
             const pHcalculations = {
                 name: 'pH Calculation Quiz Review',
                 filename: 'presets/pHcalculations.csv',
@@ -616,7 +614,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 filename: 'presets/apchemistryunit17.csv',
                 description: 'HW Problems and More'
             };
-
+    
             const calculusUnit8 = {
                 name: 'AP Calculus Unit 8 Quiz',
                 filename: 'presets/apcalcunit8.csv',
@@ -646,91 +644,90 @@ document.addEventListener('DOMContentLoaded', function() {
                 filename: 'presets/apmacrounit3.csv',
                 description: 'Unit 3 Full Test Prep'
             };
-
+    
             const macroUnit4 = {
                 name: 'AP Macro Unit 4 Test',
                 filename: 'presets/apmacrounit4.csv',
                 description: 'Unit 4 Full Test Prep'
             };
-
-
+    
             const bizunit4_1 = {
                 name: 'IB Business unit 4.1',
-                filename : 'presets/ibbusiness4.1.csv',
-                description : 'Unit 4.1 MCQ questions'
-            }
-
+                filename: 'presets/ibbusiness4.1.csv',
+                description: 'Unit 4.1 MCQ questions'
+            };
+    
             const bizunit4_2 = {
                 name: 'IB Business unit 4.2',
-                filename : 'presets/ibbusiness4.2.csv',
-                description : 'Unit 4.2 MCQ questions'
-            }
-
+                filename: 'presets/ibbusiness4.2.csv',
+                description: 'Unit 4.2 MCQ questions'
+            };
+    
             const bizunit4_3 = {
                 name: 'IB Business unit 4.3',
-                filename : 'presets/ibbusiness4.3.csv',
-                description : 'Unit 4.3 MCQ questions'
-            }
-
+                filename: 'presets/ibbusiness4.3.csv',
+                description: 'Unit 4.3 MCQ questions'
+            };
+    
             const bizunit4_4 = {
                 name: 'IB Business unit 4.4',
-                filename : 'presets/ibbusiness4.4.csv',
-                description : 'Unit 4.4 MCQ questions'
-            }
-
+                filename: 'presets/ibbusiness4.4.csv',
+                description: 'Unit 4.4 MCQ questions'
+            };
+    
             const bizunit4_5a = {
                 name: 'IB Business unit 4.5 A',
-                filename : 'presets/ibbusiness4.5a.csv',
-                description : 'Unit 4.5 A MCQ questions'
-            }
-
+                filename: 'presets/ibbusiness4.5a.csv',
+                description: 'Unit 4.5 A MCQ questions'
+            };
+    
             const bizunit4_5b = {
                 name: 'IB Business unit 4.5 B',
-                filename : 'presets/ibbusiness4.5b.csv',
-                description : 'Unit 4.5 B MCQ questions'
-            }
-
+                filename: 'presets/ibbusiness4.5b.csv',
+                description: 'Unit 4.5 B MCQ questions'
+            };
+    
             const bizunit4_5c = {
                 name: 'IB Business unit 4.5 C',
-                filename : 'presets/ibbusiness4.5.c.csv',
-                description : 'Unit 4.5 C MCQ questions'
-            }
-
+                filename: 'presets/ibbusiness4.5.c.csv',
+                description: 'Unit 4.5 C MCQ questions'
+            };
+    
             const bizunit4_5d = {
                 name: 'IB Business unit 4.5 D',
-                filename : 'presets/ibbusiness.4.5.d.csv',
-                description : 'Unit 4.5 D MCQ questions'
-            }
-
+                filename: 'presets/ibbusiness.4.5.d.csv',
+                description: 'Unit 4.5 D MCQ questions'
+            };
+    
             const bizunit4_5e = {
                 name: 'IB Business unit 4.5 E',
-                filename : 'presets/ibbusiness.4.5.e.csv',
-                description : 'Unit 4.5 E MCQ questions'
-            }
-
+                filename: 'presets/ibbusiness.4.5.e.csv',
+                description: 'Unit 4.5 E MCQ questions'
+            };
+    
             const bizunit4_5f = {
                 name: 'IB Business unit 4.5 F',
-                filename : 'presets/ibbusiness4.5.f.csv',
-                description : 'Unit 4.5 F MCQ questions'
-            }
-
+                filename: 'presets/ibbusiness4.5.f.csv',
+                description: 'Unit 4.5 F MCQ questions'
+            };
+    
             const bizunit4_5g = {
                 name: 'IB Business unit 4.5 G',
-                filename : 'presets/ibbusiness4.5.g.csv',
-                description : 'Unit 4.5 G MCQ questions'
-            }
-
+                filename: 'presets/ibbusiness4.5.g.csv',
+                description: 'Unit 4.5 G MCQ questions'
+            };
+    
             const bizunit4_6 = {
-                name: 'IB Business unit 4.6 ',
+                name: 'IB Business unit 4.6',
                 filename: 'presets/ibbusiness4.6.csv',
                 description: 'Unit 4.6 MCQ Questions'
-            }
-
+            };
+    
             const appsychunit5 = {
                 name: 'AP Psychology Unit 5',
                 filename: 'presets/appsychunit5.csv',
                 description: 'Unit 5 Review'
-            }
+            };
     
             // Add presets to their respective categories
             const chemistry = subjectCategories.find(cat => cat.id === 'chemistry');
@@ -739,10 +736,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 chemistry.presets.push(chemistryUnit17);
                 chemistry.presets.push(pHcalculations);
             }
-
-            const psychology = subjectCategories.find(cat => cat.id === 'economics');
+    
+            const psychology = subjectCategories.find(cat => cat.id === 'psychology');
             if (psychology) {
-                economics.presets.push(appsychunit5);
+                psychology.presets.push(appsychunit5); // Fixed: using psychology instead of economics
             }
     
             const calculus = subjectCategories.find(cat => cat.id === 'calculus');
@@ -757,31 +754,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 statistics.presets.push(statsUnit89);
             }
     
-            const physics = subjectCategories.find(cat => cat.id === 'physics');
-            if (physics) {
-                physics.presets.push(physicsUnit4);
-            }
-    
             const economics = subjectCategories.find(cat => cat.id === 'economics');
             if (economics) {
                 economics.presets.push(macroUnit3);
                 economics.presets.push(macroUnit4);
             }
-
-            const ib_business = subjectCategories.find(cat => cat.id === 'ib-business' );
-            if (ib_business){
-                ib_business.presets.push(bizunit4_1)
-                ib_business.presets.push(bizunit4_2)
-                ib_business.presets.push(bizunit4_3)
-                ib_business.presets.push(bizunit4_4)
-                ib_business.presets.push(bizunit4_5a)
-                ib_business.presets.push(bizunit4_5b)
-                ib_business.presets.push(bizunit4_5c)
-                ib_business.presets.push(bizunit4_5d)
-                ib_business.presets.push(bizunit4_5e)
-                ib_business.presets.push(bizunit4_5g)
-                ib_business.presets.push(bizunit4_5f)
-                ib_business.presets.push(bizunit4_6)
+    
+            const ib_business = subjectCategories.find(cat => cat.id === 'ib-business');
+            if (ib_business) {
+                ib_business.presets.push(bizunit4_1);
+                ib_business.presets.push(bizunit4_2);
+                ib_business.presets.push(bizunit4_3);
+                ib_business.presets.push(bizunit4_4);
+                ib_business.presets.push(bizunit4_5a);
+                ib_business.presets.push(bizunit4_5b);
+                ib_business.presets.push(bizunit4_5c);
+                ib_business.presets.push(bizunit4_5d);
+                ib_business.presets.push(bizunit4_5e);
+                ib_business.presets.push(bizunit4_5f);
+                ib_business.presets.push(bizunit4_5g);
+                ib_business.presets.push(bizunit4_6);
             }
     
             // Filter out empty categories
@@ -812,6 +804,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     displaySubjectCategories();
                 }
             }
+    
+            // Debug output to console
+            console.log("Subject categories loaded:", filteredCategories);
+            console.log("All presets loaded:", allPresets);
+            
         } catch (error) {
             console.error("Error organizing preset files:", error);
             if (elements.presetsContainer) {
