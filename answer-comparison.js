@@ -20,18 +20,41 @@ window.QuickStudyAI = (function() {
 
         // If we already have the key, return it
         if (GEMINI_API_KEY) {
+            console.log("QuickStudyAI: Using cached API key");
             return GEMINI_API_KEY;
         }
 
         // Set flag that we're loading the key
         isLoadingApiKey = true;
+        console.log("QuickStudyAI: Fetching API key from Netlify function");
 
         try {
             const response = await fetch('/.netlify/functions/get-gemini-key');
+            
+            // Log detailed response info for debugging
+            console.log("QuickStudyAI: API key fetch response status:", response.status);
+            
             if (!response.ok) {
-                throw new Error(`Failed to get API key: ${response.status} ${response.statusText}`);
+                // Try to get more details about the error
+                let errorDetails = "";
+                try {
+                    const errorJson = await response.json();
+                    errorDetails = JSON.stringify(errorJson);
+                } catch (e) {
+                    errorDetails = await response.text();
+                }
+                
+                throw new Error(`Failed to get API key: ${response.status} ${response.statusText}. Details: ${errorDetails}`);
             }
+            
             const data = await response.json();
+            console.log("QuickStudyAI: API key response received");
+            
+            // Validate the response contains a key
+            if (!data.key) {
+                throw new Error("API key missing from response");
+            }
+            
             GEMINI_API_KEY = data.key;
             
             // Resolve all waiting callbacks
@@ -41,7 +64,7 @@ window.QuickStudyAI = (function() {
             console.log("QuickStudyAI: Successfully retrieved API key");
             return GEMINI_API_KEY;
         } catch (error) {
-            console.error("Error fetching API key:", error);
+            console.error("QuickStudyAI: Error fetching API key:", error);
             
             // Resolve all waiting callbacks with null
             apiKeyCallbacks.forEach(callback => callback(null));
