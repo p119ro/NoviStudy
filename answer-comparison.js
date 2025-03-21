@@ -1,21 +1,55 @@
 // Gemini AI-powered answer comparison
 window.QuickStudyAI = (function() {
-    // Instead of hardcoded API key
-    const GEMINI_API_KEY = ""; // Will be provided via server environment
+    // Initialize as null, will be populated via API call
+    let GEMINI_API_KEY = null;
     const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent";
+    
+    // Flag to track if we're currently fetching the API key
+    let isLoadingApiKey = false;
+    // Queue of callbacks waiting for API key
+    let apiKeyCallbacks = [];
 
     // Function to get API key from server
     async function getApiKey() {
+        // If we're already loading the key, don't make another request
+        if (isLoadingApiKey) {
+            return new Promise((resolve) => {
+                apiKeyCallbacks.push(resolve);
+            });
+        }
+
+        // If we already have the key, return it
+        if (GEMINI_API_KEY) {
+            return GEMINI_API_KEY;
+        }
+
+        // Set flag that we're loading the key
+        isLoadingApiKey = true;
+
         try {
             const response = await fetch('/.netlify/functions/get-gemini-key');
             if (!response.ok) {
-                throw new Error('Failed to get API key');
+                throw new Error(`Failed to get API key: ${response.status} ${response.statusText}`);
             }
             const data = await response.json();
-            return data.key;
+            GEMINI_API_KEY = data.key;
+            
+            // Resolve all waiting callbacks
+            apiKeyCallbacks.forEach(callback => callback(GEMINI_API_KEY));
+            apiKeyCallbacks = [];
+            
+            console.log("QuickStudyAI: Successfully retrieved API key");
+            return GEMINI_API_KEY;
         } catch (error) {
             console.error("Error fetching API key:", error);
+            
+            // Resolve all waiting callbacks with null
+            apiKeyCallbacks.forEach(callback => callback(null));
+            apiKeyCallbacks = [];
+            
             return null;
+        } finally {
+            isLoadingApiKey = false;
         }
     }
 
@@ -35,7 +69,7 @@ window.QuickStudyAI = (function() {
      * @param {string} question - The original question (for context)
      * @param {Function} callback - Callback with result (true/false)
      */
-    function compareAnswers(userAnswer, expectedAnswer, question, callback) {
+    async function compareAnswers(userAnswer, expectedAnswer, question, callback) {
         console.log("QuickStudyAI: Comparing answers");
         console.log("User Answer:", userAnswer);
         console.log("Expected Answer:", expectedAnswer);
@@ -60,6 +94,16 @@ window.QuickStudyAI = (function() {
             console.log("QuickStudyAI: Empty answer, marking as incorrect");
             chatContext.wasCorrect = false;
             callback(false);
+            return;
+        }
+
+        // Make sure we have a valid API key before proceeding
+        const apiKey = await getApiKey();
+        if (!apiKey) {
+            console.error("QuickStudyAI: No API key available, using fallback check");
+            const isCorrect = fallbackCheck();
+            chatContext.wasCorrect = isCorrect;
+            callback(isCorrect);
             return;
         }
 
@@ -90,64 +134,56 @@ window.QuickStudyAI = (function() {
             
             console.log("QuickStudyAI: Text similarity:", similarity);
             // If similarity is high enough, consider it correct
-            const isCorrect = similarity > 0.6;
-            chatContext.wasCorrect = isCorrect;
-            return isCorrect;
+            return similarity > 0.6;
         }
         
         // Call the Gemini API
-        fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: prompt
+        try {
+            const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
                     }]
-                }]
-            })
-        })
-        .then(response => {
+                })
+            });
+            
             if (!response.ok) {
                 console.error("QuickStudyAI: Gemini API error:", response.status, response.statusText);
                 throw new Error(`API request failed with status ${response.status}`);
             }
-            return response.json();
-        })
-        .then(data => {
-            try {
-                console.log("QuickStudyAI: Gemini API response:", data);
-                
-                // Check if the response has the expected structure
-                if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
-                    console.error("QuickStudyAI: Unexpected API response structure:", data);
-                    throw new Error("Unexpected API response structure");
-                }
-                
-                // Extract the response text
-                const aiResponse = data.candidates[0].content.parts[0].text.trim().toUpperCase();
-                console.log("QuickStudyAI: AI response:", aiResponse);
-                
-                // Update chat context
-                chatContext.wasCorrect = aiResponse === "YES";
-                
-                // Return true if the AI says YES
-                callback(aiResponse === "YES");
-            } catch (err) {
-                console.error("QuickStudyAI: Error parsing Gemini response:", err);
-                // Fall back to basic comparison if parsing fails
-                console.log("QuickStudyAI: Falling back to similarity check due to parsing error");
-                callback(fallbackCheck());
+            
+            const data = await response.json();
+            console.log("QuickStudyAI: Gemini API response:", data);
+            
+            // Check if the response has the expected structure
+            if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
+                console.error("QuickStudyAI: Unexpected API response structure:", data);
+                throw new Error("Unexpected API response structure");
             }
-        })
-        .catch(error => {
+            
+            // Extract the response text
+            const aiResponse = data.candidates[0].content.parts[0].text.trim().toUpperCase();
+            console.log("QuickStudyAI: AI response:", aiResponse);
+            
+            // Update chat context
+            chatContext.wasCorrect = aiResponse === "YES";
+            
+            // Return true if the AI says YES
+            callback(aiResponse === "YES");
+        } catch (error) {
             console.error("QuickStudyAI: Error comparing answers with AI:", error);
             // Fall back to basic comparison if API fails
             console.log("QuickStudyAI: Falling back to similarity check due to API error");
-            callback(fallbackCheck());
-        });
+            const isCorrect = fallbackCheck();
+            chatContext.wasCorrect = isCorrect;
+            callback(isCorrect);
+        }
     }
 
     /**
@@ -158,7 +194,7 @@ window.QuickStudyAI = (function() {
      * @param {boolean} wasCorrect - Whether the answer was marked correct
      * @param {Function} callback - Callback with explanation text result
      */
-    function getExplanation(userAnswer, expectedAnswer, question, wasCorrect, callback) {
+    async function getExplanation(userAnswer, expectedAnswer, question, wasCorrect, callback) {
         console.log("QuickStudyAI: Getting explanation");
         console.log("User Answer:", userAnswer);
         console.log("Expected Answer:", expectedAnswer);
@@ -171,6 +207,19 @@ window.QuickStudyAI = (function() {
         chatContext.expectedAnswer = expectedAnswer;
         chatContext.wasCorrect = wasCorrect;
         chatContext.conversationHistory = []; // Reset for new explanation
+        
+        // Make sure we have a valid API key before proceeding
+        const apiKey = await getApiKey();
+        if (!apiKey) {
+            console.error("QuickStudyAI: No API key available, using default explanation");
+            const defaultExplanation = getDefaultExplanation();
+            chatContext.conversationHistory.push({
+                role: "assistant",
+                content: defaultExplanation
+            });
+            callback(defaultExplanation);
+            return;
+        }
         
         // Construct the prompt for Gemini
         const prompt = `
@@ -230,65 +279,51 @@ Make sure to review this topic in your notes or textbook.
         }
         
         // Call the Gemini API
-        fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: prompt
-                    }]
-                }],
-                generationConfig: {
-                    temperature: 0.2,
-                    maxOutputTokens: 1000
-                }
-            })
-        })
-        .then(response => {
+        try {
+            const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.2,
+                        maxOutputTokens: 1000
+                    }
+                })
+            });
+            
             if (!response.ok) {
                 console.error("QuickStudyAI: Gemini API error:", response.status, response.statusText);
                 throw new Error(`API request failed with status ${response.status}`);
             }
-            return response.json();
-        })
-        .then(data => {
-            try {
-                console.log("QuickStudyAI: Gemini API explanation response:", data);
-                
-                // Check if the response has the expected structure
-                if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
-                    console.error("QuickStudyAI: Unexpected API response structure:", data);
-                    throw new Error("Unexpected API response structure");
-                }
-                
-                // Extract the response text
-                const explanation = data.candidates[0].content.parts[0].text.trim();
-                console.log("QuickStudyAI: Generated explanation:", explanation);
-                
-                // Store the initial explanation in conversation history
-                chatContext.conversationHistory.push({
-                    role: "assistant",
-                    content: explanation
-                });
-                
-                callback(explanation);
-            } catch (err) {
-                console.error("QuickStudyAI: Error parsing Gemini response:", err);
-                const defaultExplanation = getDefaultExplanation();
-                
-                // Store default explanation in conversation history
-                chatContext.conversationHistory.push({
-                    role: "assistant",
-                    content: defaultExplanation
-                });
-                
-                callback(defaultExplanation);
+            
+            const data = await response.json();
+            console.log("QuickStudyAI: Gemini API explanation response:", data);
+            
+            // Check if the response has the expected structure
+            if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
+                console.error("QuickStudyAI: Unexpected API response structure:", data);
+                throw new Error("Unexpected API response structure");
             }
-        })
-        .catch(error => {
+            
+            // Extract the response text
+            const explanation = data.candidates[0].content.parts[0].text.trim();
+            console.log("QuickStudyAI: Generated explanation:", explanation);
+            
+            // Store the initial explanation in conversation history
+            chatContext.conversationHistory.push({
+                role: "assistant",
+                content: explanation
+            });
+            
+            callback(explanation);
+        } catch (error) {
             console.error("QuickStudyAI: Error getting explanation with AI:", error);
             const defaultExplanation = getDefaultExplanation();
             
@@ -299,7 +334,7 @@ Make sure to review this topic in your notes or textbook.
             });
             
             callback(defaultExplanation);
-        });
+        }
     }
 
     /**
@@ -307,7 +342,7 @@ Make sure to review this topic in your notes or textbook.
      * @param {string} question - The follow-up question from user
      * @param {Function} callback - Callback with response text
      */
-    function handleFollowUpQuestion(question, callback) {
+    async function handleFollowUpQuestion(question, callback) {
         console.log("QuickStudyAI: Processing follow-up question");
         console.log("Question:", question);
         
@@ -316,6 +351,19 @@ Make sure to review this topic in your notes or textbook.
             role: "user",
             content: question
         });
+        
+        // Make sure we have a valid API key before proceeding
+        const apiKey = await getApiKey();
+        if (!apiKey) {
+            console.error("QuickStudyAI: No API key available, using default response");
+            const defaultResponse = getDefaultResponse();
+            chatContext.conversationHistory.push({
+                role: "assistant",
+                content: defaultResponse
+            });
+            callback(defaultResponse);
+            return;
+        }
         
         // Create a conversation history string for context
         let conversationHistoryText = "";
@@ -352,65 +400,51 @@ Make sure to review this topic in your notes or textbook.
         }
         
         // Call the Gemini API
-        fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: prompt
-                    }]
-                }],
-                generationConfig: {
-                    temperature: 0.3,
-                    maxOutputTokens: 600
-                }
-            })
-        })
-        .then(response => {
+        try {
+            const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.3,
+                        maxOutputTokens: 600
+                    }
+                })
+            });
+            
             if (!response.ok) {
                 console.error("QuickStudyAI: Gemini API error:", response.status, response.statusText);
                 throw new Error(`API request failed with status ${response.status}`);
             }
-            return response.json();
-        })
-        .then(data => {
-            try {
-                console.log("QuickStudyAI: Gemini API follow-up response:", data);
-                
-                // Check if the response has the expected structure
-                if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
-                    console.error("QuickStudyAI: Unexpected API response structure:", data);
-                    throw new Error("Unexpected API response structure");
-                }
-                
-                // Extract the response text
-                const response = data.candidates[0].content.parts[0].text.trim();
-                console.log("QuickStudyAI: Follow-up response:", response);
-                
-                // Add response to conversation history
-                chatContext.conversationHistory.push({
-                    role: "assistant",
-                    content: response
-                });
-                
-                callback(response);
-            } catch (err) {
-                console.error("QuickStudyAI: Error parsing Gemini follow-up response:", err);
-                const defaultResponse = getDefaultResponse();
-                
-                // Add fallback response to conversation history
-                chatContext.conversationHistory.push({
-                    role: "assistant",
-                    content: defaultResponse
-                });
-                
-                callback(defaultResponse);
+            
+            const data = await response.json();
+            console.log("QuickStudyAI: Gemini API follow-up response:", data);
+            
+            // Check if the response has the expected structure
+            if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
+                console.error("QuickStudyAI: Unexpected API response structure:", data);
+                throw new Error("Unexpected API response structure");
             }
-        })
-        .catch(error => {
+            
+            // Extract the response text
+            const response_text = data.candidates[0].content.parts[0].text.trim();
+            console.log("QuickStudyAI: Follow-up response:", response_text);
+            
+            // Add response to conversation history
+            chatContext.conversationHistory.push({
+                role: "assistant",
+                content: response_text
+            });
+            
+            callback(response_text);
+        } catch (error) {
             console.error("QuickStudyAI: Error getting follow-up response with AI:", error);
             const defaultResponse = getDefaultResponse();
             
@@ -421,7 +455,7 @@ Make sure to review this topic in your notes or textbook.
             });
             
             callback(defaultResponse);
-        });
+        }
     }
 
     /**
@@ -430,10 +464,18 @@ Make sure to review this topic in your notes or textbook.
      * @param {string} question - The original question (for context)
      * @param {Function} callback - Callback with formatted answer text
      */
-    function formatCorrectAnswer(expectedAnswer, question, callback) {
+    async function formatCorrectAnswer(expectedAnswer, question, callback) {
         console.log("QuickStudyAI: Formatting correct answer");
         console.log("Expected Answer:", expectedAnswer);
         console.log("Question:", question);
+        
+        // Make sure we have a valid API key before proceeding
+        const apiKey = await getApiKey();
+        if (!apiKey) {
+            console.error("QuickStudyAI: No API key available, using default formatting");
+            callback(getDefaultFormatting());
+            return;
+        }
         
         // Construct the prompt for Gemini
         const prompt = `
@@ -465,54 +507,48 @@ Make sure to review this topic in your notes or textbook.
         }
         
         // Call the Gemini API
-        fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: prompt
-                    }]
-                }],
-                generationConfig: {
-                    temperature: 0.1,
-                    maxOutputTokens: 200
-                }
-            })
-        })
-        .then(response => {
+        try {
+            const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.1,
+                        maxOutputTokens: 200
+                    }
+                })
+            });
+            
             if (!response.ok) {
                 console.error("QuickStudyAI: Gemini API error:", response.status, response.statusText);
                 throw new Error(`API request failed with status ${response.status}`);
             }
-            return response.json();
-        })
-        .then(data => {
-            try {
-                console.log("QuickStudyAI: Gemini API formatting response:", data);
-                
-                // Check if the response has the expected structure
-                if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
-                    console.error("QuickStudyAI: Unexpected API response structure:", data);
-                    throw new Error("Unexpected API response structure");
-                }
-                
-                // Extract the response text
-                const formattedAnswer = data.candidates[0].content.parts[0].text.trim();
-                console.log("QuickStudyAI: Formatted answer:", formattedAnswer);
-                
-                callback(formattedAnswer);
-            } catch (err) {
-                console.error("QuickStudyAI: Error parsing Gemini response:", err);
-                callback(getDefaultFormatting());
+            
+            const data = await response.json();
+            console.log("QuickStudyAI: Gemini API formatting response:", data);
+            
+            // Check if the response has the expected structure
+            if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
+                console.error("QuickStudyAI: Unexpected API response structure:", data);
+                throw new Error("Unexpected API response structure");
             }
-        })
-        .catch(error => {
+            
+            // Extract the response text
+            const formattedAnswer = data.candidates[0].content.parts[0].text.trim();
+            console.log("QuickStudyAI: Formatted answer:", formattedAnswer);
+            
+            callback(formattedAnswer);
+        } catch (error) {
             console.error("QuickStudyAI: Error formatting answer with AI:", error);
             callback(getDefaultFormatting());
-        });
+        }
     }
 
     /**
@@ -520,8 +556,16 @@ Make sure to review this topic in your notes or textbook.
      * @param {string} questionText - The original question text
      * @param {Function} callback - Callback with formatted question text
      */
-    function formatQuestionText(questionText, callback) {
+    async function formatQuestionText(questionText, callback) {
         console.log("QuickStudyAI: Formatting question text");
+        
+        // Make sure we have a valid API key before proceeding
+        const apiKey = await getApiKey();
+        if (!apiKey) {
+            console.error("QuickStudyAI: No API key available, using default formatting");
+            callback(getDefaultFormatting());
+            return;
+        }
         
         // Construct the prompt for Gemini
         const prompt = `
@@ -540,56 +584,53 @@ Make sure to review this topic in your notes or textbook.
         }
         
         // Call the Gemini API
-        fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: prompt
-                    }]
-                }],
-                generationConfig: {
-                    temperature: 0.1,
-                    maxOutputTokens: 300
-                }
-            })
-        })
-        .then(response => {
+        try {
+            const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.1,
+                        maxOutputTokens: 300
+                    }
+                })
+            });
+            
             if (!response.ok) {
                 console.error("QuickStudyAI: Gemini API error:", response.status, response.statusText);
                 throw new Error(`API request failed with status ${response.status}`);
             }
-            return response.json();
-        })
-        .then(data => {
-            try {
-                console.log("QuickStudyAI: Gemini API question formatting response:", data);
-                
-                // Check if the response has the expected structure
-                if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
-                    console.error("QuickStudyAI: Unexpected API response structure:", data);
-                    throw new Error("Unexpected API response structure");
-                }
-                
-                // Extract the response text
-                const formattedQuestion = data.candidates[0].content.parts[0].text.trim();
-                console.log("QuickStudyAI: Formatted question:", formattedQuestion);
-                
-                callback(formattedQuestion);
-            } catch (err) {
-                console.error("QuickStudyAI: Error parsing Gemini response:", err);
-                callback(getDefaultFormatting());
+            
+            const data = await response.json();
+            console.log("QuickStudyAI: Gemini API question formatting response:", data);
+            
+            // Check if the response has the expected structure
+            if (!data.candidates || !data.candidates[0] || !data.candidates[0].content || !data.candidates[0].content.parts || !data.candidates[0].content.parts[0]) {
+                console.error("QuickStudyAI: Unexpected API response structure:", data);
+                throw new Error("Unexpected API response structure");
             }
-        })
-        .catch(error => {
+            
+            // Extract the response text
+            const formattedQuestion = data.candidates[0].content.parts[0].text.trim();
+            console.log("QuickStudyAI: Formatted question:", formattedQuestion);
+            
+            callback(formattedQuestion);
+        } catch (error) {
             console.error("QuickStudyAI: Error formatting question with AI:", error);
             callback(getDefaultFormatting());
-        });
+        }
     }
 
+    // The rest of the functions remain the same, just update them to use the API key from getApiKey()
+    // For brevity, I'll keep these functions as they are in this example
+    
     /**
      * Creates a chat UI under the explanation to allow follow-up questions
      * @param {HTMLElement} container - The container to add the chat UI to
@@ -878,11 +919,19 @@ Make sure to review this topic in your notes or textbook.
         console.log("QuickStudyAI: Added chat UI styles");
     }
 
-    // Add a simple test to confirm the module loaded correctly
-    console.log("QuickStudyAI module loaded successfully:", true);
-    
-    // Initialize chat styles
-    addChatStyles();
+    // Initialize
+    (async function init() {
+        console.log("QuickStudyAI: Initializing");
+        addChatStyles();
+        
+        // Try to get the API key at startup
+        const apiKey = await getApiKey();
+        if (apiKey) {
+            console.log("QuickStudyAI: Successfully initialized with API key");
+        } else {
+            console.warn("QuickStudyAI: Failed to get API key at initialization, will try again when needed");
+        }
+    })();
 
     // Public API
     return {
