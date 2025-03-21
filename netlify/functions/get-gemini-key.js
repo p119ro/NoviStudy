@@ -6,17 +6,17 @@ exports.handler = async function(event, context) {
   }
 
   try {
-    // Log the environment variable for debugging
-    console.log("Environment variables available:", Object.keys(process.env));
+    // Look for either variable name, with preference for GEMINI_API_KEY since that's what you have set
+    const apiKey = process.env.GEMINI_API_KEY
     
-    // Check if the key exists
-    if (!process.env.GEMINI_AI_KEY) {
-      console.log("GEMINI_AI_KEY is not defined in environment variables");
+    // Check if either key exists
+    if (!apiKey) {
+      console.log("GEMINI_API_KEY is not defined in environment variables");
       return {
         statusCode: 500,
         body: JSON.stringify({ 
           error: "API key not found in environment variables",
-          hint: "Check that GEMINI_AI_KEY is correctly set in Netlify environment variables"
+          hint: "Check that GEMINI_API_KEY is correctly set in Netlify environment variables"
         })
       };
     }
@@ -27,7 +27,7 @@ exports.handler = async function(event, context) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ 
-        key: process.env.GEMINI_AI_KEY
+        key: apiKey
       })
     };
   } catch (error) {
