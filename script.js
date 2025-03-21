@@ -554,48 +554,45 @@ document.addEventListener('DOMContentLoaded', function() {
             const subjectCategories = [
                 {
                     id: 'chemistry',
-                    name: 'Chemistry',
+                    name: 'AP Chemistry',
                     icon: '🧪',
                     description: 'AP Chemistry study materials',
                     presets: []
                 },
                 {
                     id: 'calculus',
-                    name: 'Calculus',
+                    name: 'AP Calculus',
                     icon: '📊',
                     description: 'AP Calculus study materials',
                     presets: []
                 },
                 {
                     id: 'statistics',
-                    name: 'Statistics',
+                    name: 'AP Statistics',
                     icon: '📈',
                     description: 'AP Statistics study materials',
                     presets: []
                 },
-
-                {
-                    id: 'business',
-                    name: 'Business',
-                    icon: '💸',
-                    description: 'IB Business study materials',
-                    presets: []
-                },
-
                 {
                     id: 'economics',
-                    name: 'Economics',
+                    name: 'AP Macroeconomics',
                     icon: '💰',
                     description: 'AP Economics study materials',
                     presets: []
                 
                 },
-
                 {
                     id: 'ib-business',
                     name: 'IB Business',
                     icon: '💼',
-                    description: 'IB Business Study materials',
+                    description: 'IB Business study materials',
+                    presets: []
+                },
+                {
+                    id: 'psychology',
+                    name: 'AP Psychology',
+                    icon: '🧠',
+                        description: 'AP Psychology study materials',
                     presets: []
                 }
 
@@ -728,6 +725,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 filename: 'presets/ibbusiness4.6.csv',
                 description: 'Unit 4.6 MCQ Questions'
             }
+
+            const appsychunit5 = {
+                name: 'AP Psychology Unit 5',
+                filename: 'presets/appsychunit5.csv',
+                description: 'Unit 5 Review'
+            }
     
             // Add presets to their respective categories
             const chemistry = subjectCategories.find(cat => cat.id === 'chemistry');
@@ -735,6 +738,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 chemistry.presets.push(chemistryQuiz);
                 chemistry.presets.push(chemistryUnit17);
                 chemistry.presets.push(pHcalculations);
+            }
+
+            const psychology = subjectCategories.find(cat => cat.id === 'economics');
+            if (psychology) {
+                economics.presets.push(appsychunit5);
             }
     
             const calculus = subjectCategories.find(cat => cat.id === 'calculus');
